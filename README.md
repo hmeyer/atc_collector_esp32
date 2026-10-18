@@ -34,7 +34,7 @@ publishes a web flasher (ESP Web Tools) to GitHub Pages:
    plug in the board, and click **Connect**.
 
 The flasher picks the right firmware from the connected chip (C3 or S3).
-Every workflow run (any branch) also attaches the merged images
+Every workflow run (pushes to `main` and pull requests) also attaches the merged images
 `atc_collector_<env>.bin` as an artifact. It can be flashed at offset `0x0`
 with any esptool frontend, e.g. https://espressif.github.io/esptool-js/.
 

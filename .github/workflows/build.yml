@@ -1,7 +1,10 @@
 name: Build & publish web flasher
 
 on:
+  # Branches are built through their pull request; building their pushes too
+  # would run every commit twice.
   push:
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
@@ -16,10 +19,27 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
+      # Platforms and toolchains (~2 GB): only change with platformio.ini, so
+      # this is saved rarely. Restore an older one if the ini changed; pio then
+      # only fetches what's new. ~/.platformio/.cache holds the already
+      # unpacked download archives and is left out.
       - uses: actions/cache@v6
         with:
-          path: ~/.platformio
-          key: pio-${{ hashFiles('platformio.ini') }}
+          path: |
+            ~/.platformio
+            !~/.platformio/.cache
+          key: pio-pkgs-${{ runner.os }}-${{ hashFiles('platformio.ini') }}
+          restore-keys: pio-pkgs-${{ runner.os }}-
+      # Libraries and object files. pio rebuilds by content hash, so a restored
+      # .pio/build only recompiles changed sources (no need for ccache). Saved
+      # per commit; an ini change makes pio clean the build dir by itself.
+      - uses: actions/cache@v6
+        with:
+          path: .pio
+          key: pio-build-${{ runner.os }}-${{ hashFiles('platformio.ini') }}-${{ github.sha }}
+          restore-keys: |
+            pio-build-${{ runner.os }}-${{ hashFiles('platformio.ini') }}-
+            pio-build-${{ runner.os }}-
       - run: pip install platformio==6.2.0
       - name: Unit tests (host)
         run: pio test -e native
