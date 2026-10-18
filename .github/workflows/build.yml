@@ -1,0 +1,68 @@
+name: Build & publish web flasher
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/cache@v4
+        with:
+          path: ~/.platformio
+          key: pio-${{ hashFiles('platformio.ini') }}
+      - run: pip install platformio==6.2.0
+      - name: Unit tests (host)
+        run: pio test -e native
+      - name: Build firmware
+        run: pio run -e esp32c3_oled
+      - name: Assemble flasher site
+        run: |
+          mkdir -p _site
+          cp web/index.html _site/
+          cp .pio/build/esp32c3_oled/merged.bin _site/atc_collector_esp32c3.bin
+          cat > _site/manifest.json <<JSON
+          {
+            "name": "ATC Collector",
+            "version": "${GITHUB_SHA::7}",
+            "new_install_prompt_erase": true,
+            "builds": [
+              {
+                "chipFamily": "ESP32-C3",
+                "parts": [{ "path": "atc_collector_esp32c3.bin", "offset": 0 }]
+              }
+            ]
+          }
+          JSON
+      - name: Upload firmware image
+        uses: actions/upload-artifact@v4
+        with:
+          name: atc_collector_esp32c3-${{ github.sha }}
+          path: _site/atc_collector_esp32c3.bin
+      - uses: actions/upload-pages-artifact@v3
+        if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

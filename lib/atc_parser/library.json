@@ -1,0 +1,7 @@
+{
+  "name": "atc_parser",
+  "version": "0.1.0",
+  "description": "Parser for pvvx ATC_MiThermometer BLE advertisements (atc1441, pvvx custom, BTHome v2)",
+  "frameworks": "*",
+  "platforms": "*"
+}
