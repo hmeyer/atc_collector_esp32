@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ATC Collector Flasher</title>
+  <script type="module" src="https://unpkg.com/esp-web-tools@10.4.0/dist/web/install-button.js?module"></script>
+  <style>
+    :root { --bg: #fafafa; --fg: #1d1d1f; --muted: #666; --accent: #0b6bcb; }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg: #161618; --fg: #ececec; --muted: #9a9a9a; --accent: #5aa9ff; }
+    }
+    body { background: var(--bg); color: var(--fg); font: 16px/1.5 system-ui, sans-serif;
+           max-width: 640px; margin: 0 auto; padding: 24px 16px; }
+    h1 { font-size: 1.5rem; margin-bottom: 0.25rem; }
+    p.sub { color: var(--muted); margin-top: 0; }
+    a { color: var(--accent); }
+    esp-web-install-button { display: block; margin: 24px 0; }
+    li { margin-bottom: 0.4rem; }
+  </style>
+</head>
+<body>
+  <h1>ATC Collector</h1>
+  <p class="sub">Firmware for the ESP32-C3 OLED board: shows readings from Xiaomi
+    thermometers running <a href="https://github.com/pvvx/ATC_MiThermometer">pvvx ATC_MiThermometer</a>.</p>
+
+  <esp-web-install-button manifest="manifest.json">
+    <span slot="unsupported">Your browser can't flash devices. Use desktop Chrome or Edge.</span>
+    <span slot="not-allowed">Flashing needs a secure (https) page.</span>
+  </esp-web-install-button>
+
+  <h2>Steps</h2>
+  <ol>
+    <li>Open this page in desktop <b>Chrome</b> or <b>Edge</b> (Firefox and Safari lack Web Serial).</li>
+    <li>Connect the board by USB-C, click <b>Connect</b>, and pick the
+      "USB JTAG/serial debug unit" port.</li>
+    <li>If no port shows up, hold <b>BOOT</b>, tap <b>RST</b> (or re-plug), release BOOT, and try again.</li>
+    <li>After flashing, press <b>RST</b>. The OLED shows "Scanning" until a sensor is received.</li>
+  </ol>
+  <p class="sub">Linux: your user must be in the <code>dialout</code> (or <code>uucp</code>) group to access the port.</p>
+</body>
+</html>
