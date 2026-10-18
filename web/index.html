@@ -21,8 +21,10 @@
 </head>
 <body>
   <h1>ATC Collector</h1>
-  <p class="sub">Firmware for the ESP32-C3 OLED board: shows readings from Xiaomi
-    thermometers running <a href="https://github.com/pvvx/ATC_MiThermometer">pvvx ATC_MiThermometer</a>.</p>
+  <p class="sub">Shows readings from Xiaomi thermometers running
+    <a href="https://github.com/pvvx/ATC_MiThermometer">pvvx ATC_MiThermometer</a>.
+    Supported boards: ESP32-C3 OLED board (0.42" OLED) and Waveshare ESP32-S3-LCD-1.47.
+    The right firmware is picked automatically from the connected chip.</p>
 
   <esp-web-install-button manifest="manifest.json">
     <span slot="unsupported">Your browser can't flash devices. Use desktop Chrome or Edge.</span>
@@ -35,7 +37,7 @@
     <li>Connect the board by USB-C, click <b>Connect</b>, and pick the
       "USB JTAG/serial debug unit" port.</li>
     <li>If no port shows up, hold <b>BOOT</b>, tap <b>RST</b> (or re-plug), release BOOT, and try again.</li>
-    <li>After flashing, press <b>RST</b>. The OLED shows "Scanning" until a sensor is received.</li>
+    <li>After flashing, press <b>RST</b>. The screen shows "Scanning" until a sensor is received.</li>
   </ol>
   <p class="sub">Linux: your user must be in the <code>dialout</code> (or <code>uucp</code>) group to access the port.</p>
 </body>

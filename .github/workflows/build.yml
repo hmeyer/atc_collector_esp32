@@ -23,13 +23,15 @@ jobs:
       - run: pip install platformio==6.2.0
       - name: Unit tests (host)
         run: pio test -e native
-      - name: Build firmware
-        run: pio run -e esp32c3_oled
+      - name: Build firmware (all boards)
+        run: pio run
       - name: Assemble flasher site
         run: |
           mkdir -p _site
           cp web/index.html _site/
-          cp .pio/build/esp32c3_oled/merged.bin _site/atc_collector_esp32c3.bin
+          cp .pio/build/esp32c3_oled/merged.bin _site/atc_collector_esp32c3_oled.bin
+          cp .pio/build/esp32s3_lcd147/merged.bin _site/atc_collector_esp32s3_lcd147.bin
+          # ESP Web Tools picks the build matching the connected chip.
           cat > _site/manifest.json <<JSON
           {
             "name": "ATC Collector",
@@ -38,7 +40,11 @@ jobs:
             "builds": [
               {
                 "chipFamily": "ESP32-C3",
-                "parts": [{ "path": "atc_collector_esp32c3.bin", "offset": 0 }]
+                "parts": [{ "path": "atc_collector_esp32c3_oled.bin", "offset": 0 }]
+              },
+              {
+                "chipFamily": "ESP32-S3",
+                "parts": [{ "path": "atc_collector_esp32s3_lcd147.bin", "offset": 0 }]
               }
             ]
           }
@@ -46,8 +52,8 @@ jobs:
       - name: Upload firmware image
         uses: actions/upload-artifact@v7
         with:
-          name: atc_collector_esp32c3-${{ github.sha }}
-          path: _site/atc_collector_esp32c3.bin
+          name: atc_collector-${{ github.sha }}
+          path: _site/*.bin
       - uses: actions/upload-pages-artifact@v5
         if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
         with:
