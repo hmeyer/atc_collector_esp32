@@ -49,7 +49,9 @@ ESP32-C3 OLED board:
 | BOOT button | 9 |
 
 Other variants: change `OLED_SDA`, `OLED_SCL`, and `OLED_72X40=0` (128x64
-panel) in `platformio.ini`.
+panel) in `platformio.ini`. If the frame on the startup screen is clipped or
+shifted, adjust `OLED_X_OFFSET` / `OLED_Y_OFFSET` (position of the visible
+72x40 window in the controller's 128x64 RAM).
 
 Waveshare ESP32-S3-LCD-1.47:
 

@@ -15,19 +15,30 @@
 #ifndef OLED_72X40
 #define OLED_72X40 1
 #endif
+// Position of the visible 72x40 window in the controller's 128x64 RAM.
+#ifndef OLED_X_OFFSET
+#define OLED_X_OFFSET 30
+#endif
+#ifndef OLED_Y_OFFSET
+#define OLED_Y_OFFSET 12
+#endif
 
 namespace display {
 namespace {
 
+// The 0.42" panel shows a 72x40 window of the SSD1306's 128x64 RAM. u8g2's
+// own 72X40_ER driver assumes a different window position on these boards
+// (clipped text, garbage columns), so drive the full 128x64 and draw at an
+// offset instead.
+U8G2_SSD1306_128X64_NONAME_F_HW_I2C oled(U8G2_R0, U8X8_PIN_NONE);
 #if OLED_72X40
-// The 0.42" panel shows a 72x40 window of the SSD1306 RAM.
-U8G2_SSD1306_72X40_ER_F_HW_I2C oled(U8G2_R0, U8X8_PIN_NONE);
 const uint8_t* const kFont = u8g2_font_5x8_tf;
 constexpr int kLineHeight = 8;
+constexpr int kX = OLED_X_OFFSET, kY = OLED_Y_OFFSET, kW = 72, kH = 40;
 #else
-U8G2_SSD1306_128X64_NONAME_F_HW_I2C oled(U8G2_R0, U8X8_PIN_NONE);
 const uint8_t* const kFont = u8g2_font_7x13_tf;
 constexpr int kLineHeight = 13;
+constexpr int kX = 0, kY = 0, kW = 128, kH = 64;
 #endif
 
 void drawLine(int line, const char* fmt, ...) {
@@ -36,7 +47,7 @@ void drawLine(int line, const char* fmt, ...) {
   va_start(args, fmt);
   vsnprintf(buf, sizeof(buf), fmt, args);
   va_end(args);
-  oled.drawStr(0, (line + 1) * kLineHeight - 1, buf);
+  oled.drawStr(kX, kY + (line + 1) * kLineHeight - 1, buf);
 }
 
 }  // namespace
@@ -45,13 +56,18 @@ void begin() {
   Wire.begin(OLED_SDA, OLED_SCL);
   oled.begin();
   oled.setFont(kFont);
+  oled.setClipWindow(kX, kY, kX + kW, kY + kH);
 }
 
 void showStarting() {
+  // A frame around the visible area: if an edge is missing or doubled,
+  // adjust OLED_X_OFFSET / OLED_Y_OFFSET.
   oled.clearBuffer();
-  drawLine(0, "ATC collector");
-  drawLine(1, "starting...");
+  oled.drawFrame(kX, kY, kW, kH);
+  oled.drawStr(kX + 3, kY + 2 * kLineHeight - 1, "ATC");
+  oled.drawStr(kX + 3, kY + 3 * kLineHeight - 1, "collector");
   oled.sendBuffer();
+  delay(1500);
 }
 
 void showIdle(uint32_t now_ms, uint32_t adv_seen) {
