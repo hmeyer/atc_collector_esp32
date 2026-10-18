@@ -25,7 +25,7 @@ publishes a web flasher (ESP Web Tools) to GitHub Pages:
 
 1. One-time setup: in the repo, go to *Settings → Pages* and set **Source** to
    **GitHub Actions**.
-2. Open `https://hmeyer.github.io/atc_collector_esp32/` in desktop Chrome or Edge,
+2. Open [hmeyer.github.io/atc_collector_esp32](https://hmeyer.github.io/atc_collector_esp32/) in desktop Chrome or Edge,
    plug in the board, and click **Connect**.
 
 Every workflow run (any branch) also attaches the merged image
