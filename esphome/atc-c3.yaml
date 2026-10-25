@@ -1,13 +1,14 @@
-# ESP32-C3 board with a 0.42" 72x40 SSD1306 OLED.
+# ESP32-C3 board with a 0.42" 72x40 OLED.
 
 substitutions:
   name: atc-c3
   friendly_name: ATC C3
   button_pin: GPIO9
-  # Visible 72x40 window inside the controller's (rotated) 128x64 RAM.
-  # Unrotated it sits at (30, 12); rotated by 180 that becomes
-  # (128 - 30 - 72, 64 - 12 - 40).
-  oled_x: "26"
+  # Visible 72x40 window in the 128x64 frame buffer. It's centred in the
+  # controller's 132x64 RAM at (30, 12); the SH1106 driver starts the
+  # buffer at column 2, giving (28, 12). Centred, so 180 degree rotation
+  # doesn't move it.
+  oled_x: "28"
   oled_y: "12"
 
 packages:
@@ -27,6 +28,8 @@ wifi:
 i2c:
   sda: GPIO5
   scl: GPIO6
+  # The default 50 kHz makes a full redraw take ~300 ms.
+  frequency: 400kHz
 
 font:
   - file: "gfonts://Silkscreen"
@@ -34,11 +37,12 @@ font:
     size: 8
 
 display:
-  # Driven as 128x64 and drawn at an offset: the 72x40 preset doesn't match
-  # where the glass sits on these boards.
+  # The controller has 132 columns (SH1106-like) and no horizontal
+  # addressing mode, which the SSD1306 models rely on (the screen then
+  # shows uninitialised RAM). The SH1106 model writes page by page.
   - platform: ssd1306_i2c
     id: oled
-    model: "SSD1306 128x64"
+    model: "SH1106 128x64"
     address: 0x3C
     rotation: 180
     update_interval: 1s
