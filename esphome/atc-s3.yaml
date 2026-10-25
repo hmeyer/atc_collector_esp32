@@ -71,7 +71,8 @@ display:
       # The 172 px wide panel sits at column 34 of the controller's 240.
       offset_width: 34
       offset_height: 0
-    rotation: 90
+    # Landscape; 90 showed the image upside down on the board.
+    rotation: 270
     update_interval: 1s
     lambda: |-
       it.fill(Color::BLACK);
