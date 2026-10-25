@@ -11,6 +11,9 @@ on:
 permissions:
   contents: read
 
+env:
+  ESPHOME_VERSION: "2026.9.1"
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -19,57 +22,42 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
-      # Platforms and toolchains (~2 GB): only change with platformio.ini, so
-      # this is saved rarely. Restore an older one if the ini changed; pio then
-      # only fetches what's new. ~/.platformio/.cache holds the already
-      # unpacked download archives and is left out.
+      # ESP-IDF, toolchains and downloaded fonts: only change with the ESPHome
+      # version, so this is saved rarely.
+      - uses: actions/cache@v6
+        with:
+          path: ~/.cache/esphome
+          key: esphome-tools-${{ runner.os }}-${{ env.ESPHOME_VERSION }}
+          restore-keys: esphome-tools-${{ runner.os }}-
+      # Object files. Saved per commit, so only changed sources recompile.
+      - uses: actions/cache@v6
+        with:
+          path: esphome/.esphome
+          key: esphome-build-${{ runner.os }}-${{ env.ESPHOME_VERSION }}-${{ github.sha }}
+          restore-keys: |
+            esphome-build-${{ runner.os }}-${{ env.ESPHOME_VERSION }}-
+      # Host tests for lib/atc_parser.
       - uses: actions/cache@v6
         with:
           path: |
             ~/.platformio
             !~/.platformio/.cache
-          key: pio-pkgs-${{ runner.os }}-${{ hashFiles('platformio.ini') }}
-          restore-keys: pio-pkgs-${{ runner.os }}-
-      # Libraries and object files. pio rebuilds by content hash, so a restored
-      # .pio/build only recompiles changed sources (no need for ccache). Saved
-      # per commit; an ini change makes pio clean the build dir by itself.
-      - uses: actions/cache@v6
-        with:
-          path: .pio
-          key: pio-build-${{ runner.os }}-${{ hashFiles('platformio.ini') }}-${{ github.sha }}
-          restore-keys: |
-            pio-build-${{ runner.os }}-${{ hashFiles('platformio.ini') }}-
-            pio-build-${{ runner.os }}-
-      - run: pip install platformio==6.2.0
+            .pio
+          key: pio-native-${{ runner.os }}-${{ hashFiles('platformio.ini') }}
+      # ESPHome pins its own platformio, which also runs the host tests.
+      - run: pip install esphome==${{ env.ESPHOME_VERSION }}
       - name: Unit tests (host)
         run: pio test -e native
-      - name: Build firmware (all boards)
-        run: pio run
-      - name: Assemble flasher site
+      - name: Build firmware
         run: |
-          mkdir -p _site
-          cp web/index.html _site/
-          cp .pio/build/esp32c3_oled/merged.bin _site/atc_collector_esp32c3_oled.bin
-          cp .pio/build/esp32s3_lcd147/merged.bin _site/atc_collector_esp32s3_lcd147.bin
-          # ESP Web Tools picks the build matching the connected chip.
-          cat > _site/manifest.json <<JSON
-          {
-            "name": "ATC Collector",
-            "version": "${GITHUB_SHA::7}",
-            "new_install_prompt_erase": true,
-            "builds": [
-              {
-                "chipFamily": "ESP32-C3",
-                "parts": [{ "path": "atc_collector_esp32c3_oled.bin", "offset": 0 }]
-              },
-              {
-                "chipFamily": "ESP32-S3",
-                "parts": [{ "path": "atc_collector_esp32s3_lcd147.bin", "offset": 0 }]
-              }
-            ]
-          }
-          JSON
-      - name: Upload firmware image
+          for board in atc-c3 atc-s3; do
+            esphome -s version "${GITHUB_SHA::7}" compile "esphome/$board.yaml"
+          done
+      - name: Assemble flasher site
+        run: >
+          python scripts/build_site.py _site "${GITHUB_SHA::7}"
+          atc-c3:ESP32-C3 atc-s3:ESP32-S3
+      - name: Upload firmware images
         uses: actions/upload-artifact@v7
         with:
           name: atc_collector-${{ github.sha }}
@@ -92,7 +80,7 @@ jobs:
     steps:
       # Fails early with a clear message if Pages isn't enabled. One-time
       # setup (can't be done with GITHUB_TOKEN): Settings -> Pages ->
-      # Source: "GitHub Actions".
+      # Source: "GitHub Actions". Needs a public repo on the free plan.
       - uses: actions/configure-pages@v6
       - id: deployment
         uses: actions/deploy-pages@v5

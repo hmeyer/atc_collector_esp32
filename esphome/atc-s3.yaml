@@ -1,0 +1,97 @@
+# Waveshare ESP32-S3-LCD-1.47: 172x320 ST7789, used in landscape.
+
+substitutions:
+  name: atc-s3
+  friendly_name: ATC S3
+  button_pin: GPIO0
+
+packages:
+  common: !include common.yaml
+
+esp32:
+  variant: esp32s3
+  board: esp32-s3-devkitc-1
+  flash_size: 16MB
+  framework:
+    type: esp-idf
+
+psram:
+  mode: octal
+  speed: 80MHz
+
+spi:
+  clk_pin: GPIO40
+  mosi_pin:
+    number: GPIO45
+    ignore_strapping_warning: true
+
+output:
+  - platform: ledc
+    id: backlight_pwm
+    pin: GPIO48
+
+light:
+  - platform: monochromatic
+    id: backlight
+    name: Backlight
+    output: backlight_pwm
+    restore_mode: ALWAYS_ON
+    entity_category: config
+
+font:
+  - file: "gfonts://Roboto Mono"
+    id: medium
+    size: 22
+  - file: "gfonts://Roboto Mono@700"
+    id: large
+    size: 40
+
+color:
+  - id: grey
+    hex: "8A8A8A"
+  - id: cyan
+    hex: "5AC8E6"
+  - id: green
+    hex: "4CC764"
+  - id: red
+    hex: "F05050"
+
+display:
+  - platform: mipi_spi
+    id: lcd
+    model: ST7789V
+    dc_pin: GPIO41
+    cs_pin: GPIO42
+    reset_pin: GPIO39
+    invert_colors: true
+    color_order: rgb
+    dimensions:
+      width: 172
+      height: 320
+      # The 172 px wide panel sits at column 34 of the controller's 240.
+      offset_width: 34
+      offset_height: 0
+    rotation: 90
+    update_interval: 1s
+    lambda: |-
+      it.fill(Color::BLACK);
+      const bool wifi = id(wifi_rssi).has_state();
+      const bool ha = api_is_connected();
+      it.print(10, 8, id(medium), id(grey), "ATC collector");
+      it.printf(10, 44, id(large), ha ? id(green) : id(red), "HA %s", ha ? "OK" : "--");
+      if (wifi)
+        it.printf(10, 96, id(medium), id(cyan), "Wi-Fi %.0f dBm", id(wifi_rssi).state);
+      else
+        it.print(10, 96, id(medium), id(red), "Wi-Fi --");
+      it.printf(10, 124, id(medium), Color::WHITE, "BLE %.0f/min",
+                id(adverts_per_min).has_state() ? id(adverts_per_min).state : 0.0f);
+      it.printf(10, 148, id(medium), id(grey), "up %.0f min",
+                id(uptime_s).has_state() ? id(uptime_s).state / 60 : 0.0f);
+
+script:
+  - id: display_on
+    then:
+      - light.turn_on: backlight
+  - id: display_off
+    then:
+      - light.turn_off: backlight
