@@ -4,8 +4,10 @@ substitutions:
   name: atc-c3
   friendly_name: ATC C3
   button_pin: GPIO9
-  # Visible 72x40 window inside the controller's 128x64 RAM.
-  oled_x: "30"
+  # Visible 72x40 window inside the controller's (rotated) 128x64 RAM.
+  # Unrotated it sits at (30, 12); rotated by 180 that becomes
+  # (128 - 30 - 72, 64 - 12 - 40).
+  oled_x: "26"
   oled_y: "12"
 
 packages:
@@ -38,9 +40,13 @@ display:
     id: oled
     model: "SSD1306 128x64"
     address: 0x3C
+    rotation: 180
     update_interval: 1s
     lambda: |-
       const int x = ${oled_x}, y = ${oled_y};
+      // For 15 s after boot, frame the visible area: a missing or doubled
+      // edge means oled_x / oled_y are off.
+      if (millis() < 15000) it.rectangle(x, y, 72, 40);
       it.printf(x, y + 0, id(small), "%s", id(wifi_rssi).has_state() ? "WIFI" : "NO WIFI");
       if (id(wifi_rssi).has_state())
         it.printf(x + 71, y + 0, id(small), TextAlign::TOP_RIGHT, "%.0f", id(wifi_rssi).state);
