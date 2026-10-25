@@ -44,7 +44,8 @@ jobs:
             !~/.platformio/.cache
             .pio
           key: pio-native-${{ runner.os }}-${{ hashFiles('platformio.ini') }}
-      - run: pip install esphome==${{ env.ESPHOME_VERSION }} platformio==6.2.0
+      # ESPHome pins its own platformio, which also runs the host tests.
+      - run: pip install esphome==${{ env.ESPHOME_VERSION }}
       - name: Unit tests (host)
         run: pio test -e native
       - name: Build firmware
