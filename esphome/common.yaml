@@ -25,6 +25,11 @@ logger:
 wifi:
   # Fallback hotspot with a setup page if no network is configured or reachable.
   ap: {}
+  on_connect:
+    # Check for new firmware right after boot instead of waiting for the
+    # first interval.
+    - delay: 30s
+    - component.update: firmware_update
 
 captive_portal:
 
@@ -45,8 +50,19 @@ ota:
 
 update:
   - platform: http_request
+    id: firmware_update
     name: Firmware
     source: ${manifest_url}
+    update_interval: 1h
+
+button:
+  # Home Assistant's own "check for updates" doesn't reach this entity.
+  - platform: template
+    name: Check for firmware update
+    icon: mdi:update
+    entity_category: diagnostic
+    on_press:
+      - component.update: firmware_update
 
 esp32_ble_tracker:
   scan_parameters:
