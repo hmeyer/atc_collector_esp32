@@ -21,8 +21,9 @@
 </head>
 <body>
   <h1>ATC Collector</h1>
-  <p class="sub">Shows readings from Xiaomi thermometers running
-    <a href="https://github.com/pvvx/ATC_MiThermometer">pvvx ATC_MiThermometer</a>.
+  <p class="sub">ESPHome Bluetooth proxy for Home Assistant, with a status screen.
+    Extends HA's Bluetooth range for Xiaomi thermometers (e.g. running
+    <a href="https://github.com/pvvx/ATC_MiThermometer">pvvx ATC_MiThermometer</a>).
     Supported boards: ESP32-C3 OLED board (0.42" OLED) and Waveshare ESP32-S3-LCD-1.47.
     The right firmware is picked automatically from the connected chip.</p>
 
@@ -37,7 +38,11 @@
     <li>Connect the board by USB-C, click <b>Connect</b>, and pick the
       "USB JTAG/serial debug unit" port.</li>
     <li>If no port shows up, hold <b>BOOT</b>, tap <b>RST</b> (or re-plug), release BOOT, and try again.</li>
-    <li>After flashing, press <b>RST</b>. The screen shows "Scanning" until a sensor is received.</li>
+    <li>After installing, choose <b>Configure Wi-Fi</b> and enter your network.
+      (Skipped it? The board opens a hotspot named after itself with a setup page.)</li>
+    <li>Home Assistant then finds the board under <b>Settings &rarr; Devices &amp; services</b>
+      as a discovered ESPHome device. Click <b>Configure</b>.</li>
+    <li>Later updates appear in Home Assistant as a firmware update of the board.</li>
   </ol>
   <p class="sub">Linux: your user must be in the <code>dialout</code> (or <code>uucp</code>) group to access the port.</p>
 </body>

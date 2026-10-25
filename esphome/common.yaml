@@ -1,0 +1,117 @@
+# Shared by all boards: Wi-Fi provisioning, Home Assistant API, passive
+# Bluetooth proxy, self-updates from the GitHub Pages manifest and status
+# sensors. Board files set the chip, the display and two scripts:
+# display_on / display_off.
+#
+# Nothing secret is compiled in: the firmware is public. Wi-Fi is set in the
+# browser after flashing (Improv) or via the fallback hotspot.
+
+substitutions:
+  # Set by CI to the commit; compared against the manifest's "version".
+  version: dev
+  manifest_url: https://hmeyer.github.io/atc_collector_esp32/manifest.json
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+  # Every board flashed with the same image needs a unique name.
+  name_add_mac_suffix: true
+  project:
+    name: hmeyer.atc_collector
+    version: ${version}
+
+logger:
+
+wifi:
+  # Fallback hotspot with a setup page if no network is configured or reachable.
+  ap: {}
+
+captive_portal:
+
+improv_serial:
+
+# No encryption key yet: Home Assistant can't provision one at runtime yet
+# and a compiled-in key would be public. See README.
+api:
+
+http_request:
+
+# Updates are only pulled from the manifest; nothing can be pushed from the LAN.
+ota:
+  - platform: http_request
+    on_begin:
+      # The C3 has little RAM; free some for the HTTPS download.
+      - esp32_ble_tracker.stop_scan:
+
+update:
+  - platform: http_request
+    name: Firmware
+    source: ${manifest_url}
+
+esp32_ble_tracker:
+  scan_parameters:
+    # Passive: listen only. Sensors broadcast their readings anyway, and it
+    # saves their batteries.
+    active: false
+  on_ble_advertise:
+    - then:
+        - lambda: id(adverts_count)++;
+
+# Passive proxy: forwards advertisements, opens no connections to devices.
+bluetooth_proxy:
+  active: false
+
+globals:
+  - id: adverts_count
+    type: uint32_t
+    initial_value: "0"
+
+sensor:
+  - platform: wifi_signal
+    id: wifi_rssi
+    name: Wi-Fi signal
+    update_interval: 60s
+    entity_category: diagnostic
+  - platform: uptime
+    id: uptime_s
+    name: Uptime
+    update_interval: 60s
+    entity_category: diagnostic
+  - platform: template
+    id: adverts_per_min
+    name: BLE advertisements
+    unit_of_measurement: "1/min"
+    accuracy_decimals: 0
+    state_class: measurement
+    entity_category: diagnostic
+    update_interval: 60s
+    lambda: |-
+      uint32_t n = id(adverts_count);
+      id(adverts_count) = 0;
+      return n;
+
+switch:
+  - platform: template
+    id: display_switch
+    name: Display
+    icon: mdi:monitor
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_ON
+    turn_on_action:
+      - script.execute: display_on
+    turn_off_action:
+      - script.execute: display_off
+
+binary_sensor:
+  - platform: gpio
+    id: boot_button
+    pin:
+      number: ${button_pin}
+      # The BOOT button is on a strapping pin by design.
+      ignore_strapping_warning: true
+      inverted: true
+      mode:
+        input: true
+        pullup: true
+    on_press:
+      - switch.toggle: display_switch

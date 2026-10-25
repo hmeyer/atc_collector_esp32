@@ -1,0 +1,59 @@
+# ESP32-C3 board with a 0.42" 72x40 SSD1306 OLED.
+
+substitutions:
+  name: atc-c3
+  friendly_name: ATC C3
+  button_pin: GPIO9
+  # Visible 72x40 window inside the controller's 128x64 RAM.
+  oled_x: "30"
+  oled_y: "12"
+
+packages:
+  common: !include common.yaml
+
+esp32:
+  variant: esp32c3
+  board: esp32-c3-devkitm-1
+  framework:
+    type: esp-idf
+
+wifi:
+  # The on-board antenna of these mini boards is poorly matched; full power
+  # causes dropouts.
+  output_power: 8.5dB
+
+i2c:
+  sda: GPIO5
+  scl: GPIO6
+
+font:
+  - file: "gfonts://Silkscreen"
+    id: small
+    size: 8
+
+display:
+  # Driven as 128x64 and drawn at an offset: the 72x40 preset doesn't match
+  # where the glass sits on these boards.
+  - platform: ssd1306_i2c
+    id: oled
+    model: "SSD1306 128x64"
+    address: 0x3C
+    update_interval: 1s
+    lambda: |-
+      const int x = ${oled_x}, y = ${oled_y};
+      it.printf(x, y + 0, id(small), "%s", id(wifi_rssi).has_state() ? "WIFI" : "NO WIFI");
+      if (id(wifi_rssi).has_state())
+        it.printf(x + 71, y + 0, id(small), TextAlign::TOP_RIGHT, "%.0f", id(wifi_rssi).state);
+      it.printf(x, y + 10, id(small), "HA %s", api_is_connected() ? "OK" : "--");
+      it.printf(x, y + 20, id(small), "BLE %.0f/M",
+                id(adverts_per_min).has_state() ? id(adverts_per_min).state : 0.0f);
+      it.printf(x, y + 30, id(small), "UP %.0fM",
+                id(uptime_s).has_state() ? id(uptime_s).state / 60 : 0.0f);
+
+script:
+  - id: display_on
+    then:
+      - lambda: id(oled).turn_on();
+  - id: display_off
+    then:
+      - lambda: id(oled).turn_off();

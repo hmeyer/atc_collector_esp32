@@ -1,74 +1,75 @@
 # atc_collector_esp32
 
-BLE collector for Xiaomi Mijia thermometers (LYWSD03MMC and similar) running
-[pvvx ATC_MiThermometer](https://github.com/pvvx/ATC_MiThermometer), for these boards:
+ESPHome firmware that turns small ESP32 boards with a display into
+**Bluetooth proxies for Home Assistant**. They extend HA's Bluetooth range so
+Xiaomi thermometers (LYWSD03MMC etc., e.g. running
+[pvvx ATC_MiThermometer](https://github.com/pvvx/ATC_MiThermometer)) anywhere in
+the flat show up in HA's Xiaomi BLE / BTHome integrations. HA combines all
+proxies and its own adapter, so a sensor heard by several boards is still one
+device.
 
-| Board | PlatformIO env | Display |
+| Board | Config | Display |
 |---|---|---|
-| "ESP32-C3 OLED Entwicklungsboard" | `esp32c3_oled` | 0.42" 72x40 SSD1306 (I2C) |
-| [Waveshare ESP32-S3-LCD-1.47](https://www.waveshare.com/wiki/ESP32-S3-LCD-1.47) | `esp32s3_lcd147` | 1.47" 172x320 ST7789 (SPI), used in landscape |
+| "ESP32-C3 OLED Entwicklungsboard" | `esphome/atc-c3.yaml` | 0.42" 72x40 SSD1306 (I2C) |
+| [Waveshare ESP32-S3-LCD-1.47](https://www.waveshare.com/wiki/ESP32-S3-LCD-1.47) | `esphome/atc-s3.yaml` | 1.47" 172x320 ST7789 (SPI), landscape |
 
-This is the ESP32 counterpart of
-[atc_mi_collector](https://github.com/hmeyer/atc_mi_collector). It will
-eventually report to Home Assistant. For now it's a sign of life: it shows the
-received readings on the display and logs them to the USB serial console.
+Shared settings are in `esphome/common.yaml`:
 
-## Features
+- **Passive proxy**: only forwards advertisements, never connects to devices.
+- **Status screen**: Wi-Fi signal, HA connection, BLE advertisements per minute,
+  uptime. The BOOT button, or the *Display* switch in HA, turns it on and off.
+- **Diagnostics in HA**: Wi-Fi signal, uptime, advertisements per minute.
+- **Self-updates**: the board checks the manifest on GitHub Pages every 6 h and
+  offers new firmware as an update entity in HA.
 
-- Passively collects advertisements in all unencrypted pvvx formats: **pvvx
-  custom**, **atc1441** and **BTHome v2**. Encrypted formats are ignored.
-- Display: one page per sensor (name, temperature, humidity, battery, RSSI, age,
-  format, number of measurements). Pages advance every 4 s; the BOOT button
-  skips to the next one. The color LCD color-codes temperature and battery. With no sensors it shows a scanning screen that
-  counts all BLE advertisements seen.
-- Sensors that stay silent for 10 minutes are dropped. Up to 16 sensors are tracked.
+## Flashing and setup (browser only)
 
-## Flashing (browser only, nothing to install)
+1. Open [hmeyer.github.io/atc_collector_esp32](https://hmeyer.github.io/atc_collector_esp32/)
+   in desktop Chrome or Edge, plug in the board, click **Connect** and install.
+   The firmware for the connected chip (C3 or S3) is picked automatically.
+2. Choose **Configure Wi-Fi** after installing. Without it, the board opens a
+   hotspot named after itself with a setup page.
+3. HA lists the board under *Settings → Devices & services* as a discovered
+   ESPHome device. Configure it; no key is needed (see Security).
+4. Newly reachable sensors appear as discovered Xiaomi BLE / BTHome devices.
 
-Every push builds the firmware on GitHub Actions. On the default branch it
-publishes a web flasher (ESP Web Tools) to GitHub Pages:
+Every push to `main` builds both boards on GitHub Actions and publishes the
+flasher, the images and `manifest.json` to GitHub Pages. Pull requests attach
+the images as a workflow artifact.
 
-1. One-time setup: in the repo, go to *Settings → Pages* and set **Source** to
-   **GitHub Actions**.
-2. Open [hmeyer.github.io/atc_collector_esp32](https://hmeyer.github.io/atc_collector_esp32/) in desktop Chrome or Edge,
-   plug in the board, and click **Connect**.
+One-time repo setup: *Settings → Pages → Source: GitHub Actions*. Pages needs
+the repository to be public (on the free plan).
 
-The flasher picks the right firmware from the connected chip (C3 or S3).
-Every workflow run (pushes to `main` and pull requests) also attaches the merged images
-`atc_collector_<env>.bin` as an artifact. It can be flashed at offset `0x0`
-with any esptool frontend, e.g. https://espressif.github.io/esptool-js/.
+## Security
+
+The firmware is public, so nothing secret is compiled in:
+
+- Wi-Fi is provisioned at runtime (Improv / hotspot) and stored on the device.
+- The HA connection is **not encrypted** for now. HA can't yet provision an
+  encryption key at runtime, and a compiled-in key would be public. Anyone on
+  the LAN can therefore connect to a board and receive what it hears. That's
+  limited on purpose: the proxy is passive (it can't be used to connect to BLE
+  devices such as locks) and the readings are unencrypted broadcasts anyway.
+- Firmware can't be pushed from the LAN; boards only pull from GitHub Pages.
 
 ## Hardware notes
 
-ESP32-C3 OLED board:
+ESP32-C3 OLED board: OLED on I2C SDA=5, SCL=6, BOOT button GPIO9. The 72x40
+glass sits at (30, 12) of the controller's 128x64 RAM (`oled_x`/`oled_y` in
+`atc-c3.yaml`). Wi-Fi transmit power is reduced to 8.5 dB because full power
+causes dropouts on these boards.
 
-| | GPIO |
-|---|---|
-| OLED SDA | 5 |
-| OLED SCL | 6 |
-| BOOT button | 9 |
-
-Other variants: change `OLED_SDA`, `OLED_SCL`, and `OLED_72X40=0` (128x64
-panel) in `platformio.ini`. If the frame on the startup screen is clipped or
-shifted, adjust `OLED_X_OFFSET` / `OLED_Y_OFFSET` (position of the visible
-72x40 window in the controller's 128x64 RAM).
-
-Waveshare ESP32-S3-LCD-1.47:
-
-| | GPIO |
-|---|---|
-| LCD MOSI / SCLK / CS / DC / RST | 45 / 40 / 42 / 41 / 39 |
-| LCD backlight | 48 |
-| BOOT button | 0 |
-
-A new board needs a `display_<name>.cpp` implementing `src/display.h` and a
-PlatformIO env that selects it via `build_src_filter`.
+Waveshare ESP32-S3-LCD-1.47: LCD MOSI/SCLK/CS/DC/RST = 45/40/42/41/39,
+backlight 48, BOOT button GPIO0.
 
 ## Development
 
 ```
-pio test -e native      # parser unit tests on the host
-pio run                 # firmware for all boards; also .pio/build/<env>/merged.bin
+pip install esphome==2026.9.1
+esphome compile esphome/atc-c3.yaml   # or atc-s3.yaml
+pio test -e native                    # unit tests for lib/atc_parser
 ```
 
-The parser (`lib/atc_parser`) has no Arduino dependencies.
+`lib/atc_parser` is a host-tested parser for pvvx ATC_MiThermometer
+advertisements (atc1441, pvvx custom, BTHome v2), kept for showing sensor
+readings on the boards' displays.
