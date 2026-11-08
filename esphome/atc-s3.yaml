@@ -8,7 +8,7 @@ substitutions:
 packages:
   common: !include common.yaml
   # Header pins 1-13 are free on this board; GPIO3 is a strapping pin.
-  co2: !include {file: co2.yaml, vars: {sda: GPIO1, scl: GPIO2}}
+  co2: !include {file: co2.yaml, vars: {sda: GPIO2, scl: GPIO1}}
   radio433: !include
     file: radio433.yaml
     vars: {cs: GPIO10, sck: GPIO12, mosi: GPIO11, miso: GPIO13, gdo0: GPIO9, gdo2: GPIO8}
