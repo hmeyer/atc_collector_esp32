@@ -1,8 +1,9 @@
 # Sensirion SCD4x (SCD40/SCD41) CO2 sensor on its own I2C bus.
 # Include with: co2: !include {file: co2.yaml, vars: {sda: GPIOx, scl: GPIOy}}
 #
-# Mount the sensor 5-10 cm away from the board: the board's heat skews the
-# sensor's temperature and humidity (and therefore temperature_offset).
+# CO2 only: next to the board the sensor's temperature and humidity read
+# far too warm/dry (+13 C measured), so they aren't exposed. The SCD4x
+# compensates CO2 for its own temperature internally.
 
 i2c:
   - id: co2_i2c
@@ -16,16 +17,8 @@ sensor:
     co2:
       id: co2
       name: CO2
-    temperature:
-      id: co2_temperature
-      name: Temperature
-    humidity:
-      id: co2_humidity
-      name: Humidity
     # Berlin; only used for pressure compensation, a few 10 m don't matter.
     altitude_compensation: 40m
     # Assumes the room gets fresh air (~400 ppm) at least once a week.
     automatic_self_calibration: true
-    # Calibrate against a reference thermometer once the sensor is mounted.
-    temperature_offset: 4°C
     update_interval: 60s
