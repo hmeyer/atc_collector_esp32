@@ -1,0 +1,34 @@
+# CC1101 433 MHz transceiver on its own SPI bus, wired dual-pin:
+# GDO0 = transmit input, GDO2 = receive output.
+# Include with: radio433: !include {file: radio433.yaml, vars: {...pins...}}
+#
+# For now the receiver only logs what it hears ("dump: all"), to identify
+# the blinds' remote protocol before adding entities.
+
+spi:
+  - id: radio_spi
+    clk_pin: ${sck}
+    mosi_pin: ${mosi}
+    miso_pin: ${miso}
+
+cc1101:
+  id: radio
+  spi_id: radio_spi
+  cs_pin: ${cs}
+  frequency: 433.92MHz
+  modulation_type: ASK/OOK
+
+remote_receiver:
+  pin: ${gdo2}
+  dump: all
+
+remote_transmitter:
+  pin: ${gdo0}
+  carrier_duty_percent: 100%
+  non_blocking: true
+  on_transmit:
+    then:
+      - cc1101.begin_tx: radio
+  on_complete:
+    then:
+      - cc1101.begin_rx: radio
