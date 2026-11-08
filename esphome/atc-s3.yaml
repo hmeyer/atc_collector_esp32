@@ -96,17 +96,14 @@ display:
       } else {
         it.print(10, 6, id(large), id(grey), "CO2 --");
       }
-      if (id(co2_temperature).has_state() && id(co2_humidity).has_state())
-        it.printf(10, 60, id(medium), Color::WHITE, "%.1f°C  %.0f%%",
-                  id(co2_temperature).state, id(co2_humidity).state);
-      it.printf(10, 92, id(medium), ha ? id(green) : id(red), "HA %s", ha ? "OK" : "--");
+      it.printf(10, 70, id(medium), ha ? id(green) : id(red), "HA %s", ha ? "OK" : "--");
       if (wifi)
-        it.printf(110, 92, id(medium), id(cyan), "Wi-Fi %.0f", id(wifi_rssi).state);
+        it.printf(110, 70, id(medium), id(cyan), "Wi-Fi %.0f", id(wifi_rssi).state);
       else
-        it.print(110, 92, id(medium), id(red), "Wi-Fi --");
-      it.printf(10, 120, id(medium), id(grey), "BLE %.0f/min",
+        it.print(110, 70, id(medium), id(red), "Wi-Fi --");
+      it.printf(10, 104, id(medium), id(grey), "BLE %.0f/min",
                 id(adverts_per_min).has_state() ? id(adverts_per_min).state : 0.0f);
-      it.printf(10, 146, id(medium), id(grey), "up %.0f min",
+      it.printf(10, 138, id(medium), id(grey), "up %.0f min",
                 id(uptime_s).has_state() ? id(uptime_s).state / 60 : 0.0f);
 
 script:
