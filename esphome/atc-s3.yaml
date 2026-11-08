@@ -7,6 +7,11 @@ substitutions:
 
 packages:
   common: !include common.yaml
+  # Header pins 1-13 are free on this board; GPIO3 is a strapping pin.
+  co2: !include {file: co2.yaml, vars: {sda: GPIO1, scl: GPIO2}}
+  radio433: !include
+    file: radio433.yaml
+    vars: {cs: GPIO10, sck: GPIO12, mosi: GPIO11, miso: GPIO13, gdo0: GPIO9, gdo2: GPIO8}
 
 esp32:
   variant: esp32s3
@@ -20,10 +25,11 @@ psram:
   speed: 80MHz
 
 spi:
-  clk_pin: GPIO40
-  mosi_pin:
-    number: GPIO45
-    ignore_strapping_warning: true
+  - id: lcd_spi
+    clk_pin: GPIO40
+    mosi_pin:
+      number: GPIO45
+      ignore_strapping_warning: true
 
 output:
   - platform: ledc
@@ -53,12 +59,15 @@ color:
     hex: "5AC8E6"
   - id: green
     hex: "4CC764"
+  - id: orange
+    hex: "F0A030"
   - id: red
     hex: "F05050"
 
 display:
   - platform: mipi_spi
     id: lcd
+    spi_id: lcd_spi
     model: ST7789V
     dc_pin: GPIO41
     cs_pin: GPIO42
@@ -78,15 +87,26 @@ display:
       it.fill(Color::BLACK);
       const bool wifi = id(wifi_rssi).has_state();
       const bool ha = api_is_connected();
-      it.print(10, 8, id(medium), id(grey), "ATC collector");
-      it.printf(10, 44, id(large), ha ? id(green) : id(red), "HA %s", ha ? "OK" : "--");
+      // CO2, colour-coded: < 1000 ppm good, < 1400 ppm ventilate soon.
+      if (id(co2).has_state()) {
+        const float ppm = id(co2).state;
+        const Color c = ppm < 1000 ? id(green) : ppm < 1400 ? id(orange) : id(red);
+        it.printf(10, 6, id(large), c, "%.0f", ppm);
+        it.print(310, 26, id(medium), id(grey), TextAlign::TOP_RIGHT, "ppm CO2");
+      } else {
+        it.print(10, 6, id(large), id(grey), "CO2 --");
+      }
+      if (id(co2_temperature).has_state() && id(co2_humidity).has_state())
+        it.printf(10, 60, id(medium), Color::WHITE, "%.1f°C  %.0f%%",
+                  id(co2_temperature).state, id(co2_humidity).state);
+      it.printf(10, 92, id(medium), ha ? id(green) : id(red), "HA %s", ha ? "OK" : "--");
       if (wifi)
-        it.printf(10, 96, id(medium), id(cyan), "Wi-Fi %.0f dBm", id(wifi_rssi).state);
+        it.printf(110, 92, id(medium), id(cyan), "Wi-Fi %.0f", id(wifi_rssi).state);
       else
-        it.print(10, 96, id(medium), id(red), "Wi-Fi --");
-      it.printf(10, 124, id(medium), Color::WHITE, "BLE %.0f/min",
+        it.print(110, 92, id(medium), id(red), "Wi-Fi --");
+      it.printf(10, 120, id(medium), id(grey), "BLE %.0f/min",
                 id(adverts_per_min).has_state() ? id(adverts_per_min).state : 0.0f);
-      it.printf(10, 148, id(medium), id(grey), "up %.0f min",
+      it.printf(10, 146, id(medium), id(grey), "up %.0f min",
                 id(uptime_s).has_state() ? id(uptime_s).state / 60 : 0.0f);
 
 script:
