@@ -80,8 +80,9 @@ the header row GND 3V3 13 12 next to 5V, i.e. SCL = GPIO13, SDA = GPIO12.
 
 LILYGO TTGO T-Display: display via ESPHome's `T-DISPLAY` preset (SPI 18/19,
 CS 5, DC 16, RST 23), backlight GPIO4 (dimmable), BOOT button GPIO0. SCD4x on
-the board's I2C pins SDA = GPIO21, SCL = GPIO22 (next to 3V and G on the
-header). Its LiPo connector charges a battery, but with continuous Bluetooth
+the board's I2C pins SDA = GPIO21, SCL = GPIO22 (next to G at the end opposite
+USB), VDD to 3V (other row, same end). Not 5V: the breakout's pull-ups would
+put 5 V on the ESP32's I2C pins. Its LiPo connector charges a battery, but with continuous Bluetooth
 scanning and Wi-Fi it only lasts hours, so treat it as a backup at most.
 
 ## Development
