@@ -1,0 +1,141 @@
+# LILYGO TTGO T-Display (ESP32, 1.14" 135x240 ST7789): Bluetooth proxy and
+# live CO2 on the display, used in landscape.
+#
+# SCD4x plugged straight into the header row G G 21 22 (end opposite USB):
+# GND -> G, SCL -> GPIO21, SDA -> GPIO22. Its VDD header pin must be removed
+# (it would land on the second G) and wired to 3V instead (other row, same
+# end). Never 5V: the breakout's pull-ups would put 5 V on the I2C pins.
+# Not GPIO12: a pulled-up GPIO12 selects 1.8 V flash and stops the boot.
+
+substitutions:
+  name: atc-tdisplay
+  friendly_name: ATC T-Display
+  # BUTTON2 (BOOT) toggles the display.
+  button_pin: GPIO0
+
+packages:
+  common: !include common.yaml
+  display_toggle: !include display_toggle.yaml
+  co2: !include {file: co2.yaml, vars: {sda: GPIO22, scl: GPIO21}}
+
+esp32:
+  board: esp32dev
+  flash_size: 4MB
+  framework:
+    type: esp-idf
+
+spi:
+  - id: lcd_spi
+    clk_pin: GPIO18
+    mosi_pin: GPIO19
+
+output:
+  - platform: ledc
+    id: backlight_pwm
+    pin: GPIO4
+
+light:
+  # Dimmable from HA, e.g. by an automation at night.
+  - platform: monochromatic
+    id: backlight
+    name: Backlight
+    output: backlight_pwm
+    restore_mode: ALWAYS_ON
+    entity_category: config
+
+# What the display shows; BUTTON1 (GPIO35) cycles through it. Device-only,
+# not exposed to HA; the choice survives reboots.
+select:
+  - platform: template
+    id: co2_mode
+    internal: true
+    options:
+      - Live
+      - 1 min average
+      - 5 min average
+    initial_option: 1 min average
+    optimistic: true
+    restore_value: true
+
+binary_sensor:
+  - platform: gpio
+    id: mode_button
+    pin:
+      number: GPIO35
+      # Input-only pin; the board has an external pull-up.
+      mode: input
+      inverted: true
+    on_press:
+      - select.next:
+          id: co2_mode
+          cycle: true
+
+font:
+  - file: "gfonts://Roboto Mono"
+    id: small
+    size: 16
+  - file: "gfonts://Roboto Mono@700"
+    id: huge
+    size: 64
+
+color:
+  - id: grey
+    hex: "8A8A8A"
+  - id: cyan
+    hex: "5AC8E6"
+  - id: green
+    hex: "4CC764"
+  - id: orange
+    hex: "F0A030"
+  - id: red
+    hex: "F05050"
+
+display:
+  # ESPHome preset for this board: CS 5, DC 16, offsets and inversion.
+  # Without PSRAM it draws in strips with a small buffer.
+  - platform: mipi_spi
+    id: lcd
+    spi_id: lcd_spi
+    model: T-DISPLAY
+    # The preset's CS pin is a strapping pin; that's the board's wiring.
+    cs_pin:
+      number: GPIO5
+      ignore_strapping_warning: true
+    reset_pin: GPIO23
+    rotation: 90
+    update_interval: 1s
+    lambda: |-
+      it.fill(Color::BLACK);
+      // CO2 in the selected mode, colour-coded: < 1000 ppm good,
+      // < 1400 ppm ventilate soon.
+      static const char *const kModes[] = {"live", "1 min", "5 min"};
+      const size_t mode = id(co2_mode).active_index().value_or(1);
+      sensor::Sensor *const sources[] = {id(co2_live), id(co2_avg_1m), id(co2_avg_5m)};
+      sensor::Sensor *const src = sources[mode < 3 ? mode : 1];
+      if (src->has_state()) {
+        const float ppm = src->state;
+        const Color c = ppm < 1000 ? id(green) : ppm < 1400 ? id(orange) : id(red);
+        it.printf(4, 0, id(huge), c, "%.0f", ppm);
+      } else {
+        it.print(4, 0, id(huge), id(grey), "--");
+      }
+      it.print(236, 8, id(small), id(grey), TextAlign::TOP_RIGHT, "ppm");
+      it.print(236, 26, id(small), id(grey), TextAlign::TOP_RIGHT, "CO2");
+      it.print(236, 50, id(small), id(cyan), TextAlign::TOP_RIGHT, kModes[mode < 3 ? mode : 1]);
+      const bool ha = api_is_connected();
+      it.printf(4, 86, id(small), ha ? id(green) : id(red), "HA %s", ha ? "OK" : "--");
+      if (id(wifi_rssi).has_state())
+        it.printf(84, 86, id(small), id(cyan), "Wi-Fi %.0f", id(wifi_rssi).state);
+      else
+        it.print(84, 86, id(small), id(red), "Wi-Fi --");
+      it.printf(4, 110, id(small), id(grey), "BLE %.0f/min  up %.0fm",
+                id(adverts_per_min).has_state() ? id(adverts_per_min).state : 0.0f,
+                id(uptime_s).has_state() ? id(uptime_s).state / 60 : 0.0f);
+
+script:
+  - id: display_on
+    then:
+      - light.turn_on: backlight
+  - id: display_off
+    then:
+      - light.turn_off: backlight

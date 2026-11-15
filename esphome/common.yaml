@@ -1,7 +1,7 @@
 # Shared by all boards: Wi-Fi provisioning, Home Assistant API, passive
 # Bluetooth proxy, self-updates from the GitHub Pages manifest and status
-# sensors. Board files set the chip, the display and two scripts:
-# display_on / display_off.
+# sensors. Board files set the chip and anything board specific (display,
+# sensors).
 #
 # Nothing secret is compiled in: the firmware is public. Wi-Fi is set in the
 # browser after flashing (Improv) or via the fallback hotspot.
@@ -9,7 +9,9 @@
 substitutions:
   # Set by CI to the commit; compared against the manifest's "version".
   version: dev
-  manifest_url: https://hmeyer.github.io/atc_collector_esp32/manifest.json
+  # One manifest per board: two different S3 boards can't be told apart by
+  # chip family.
+  manifest_url: https://hmeyer.github.io/atc_collector_esp32/${name}.manifest.json
 
 esphome:
   name: ${name}
@@ -105,29 +107,3 @@ sensor:
       uint32_t n = id(adverts_count);
       id(adverts_count) = 0;
       return n;
-
-switch:
-  - platform: template
-    id: display_switch
-    name: Display
-    icon: mdi:monitor
-    optimistic: true
-    restore_mode: RESTORE_DEFAULT_ON
-    turn_on_action:
-      - script.execute: display_on
-    turn_off_action:
-      - script.execute: display_off
-
-binary_sensor:
-  - platform: gpio
-    id: boot_button
-    pin:
-      number: ${button_pin}
-      # The BOOT button is on a strapping pin by design.
-      ignore_strapping_warning: true
-      inverted: true
-      mode:
-        input: true
-        pullup: true
-    on_press:
-      - switch.toggle: display_switch
