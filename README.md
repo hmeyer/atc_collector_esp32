@@ -1,41 +1,48 @@
 # atc_collector_esp32
 
-ESPHome firmware that turns small ESP32 boards with a display into
-**Bluetooth proxies for Home Assistant**. They extend HA's Bluetooth range so
+ESPHome firmware that turns small ESP32 boards into **Bluetooth proxies for
+Home Assistant**. They extend HA's Bluetooth range so
 Xiaomi thermometers (LYWSD03MMC etc., e.g. running
 [pvvx ATC_MiThermometer](https://github.com/pvvx/ATC_MiThermometer)) anywhere in
 the flat show up in HA's Xiaomi BLE / BTHome integrations. HA combines all
 proxies and its own adapter, so a sensor heard by several boards is still one
 device.
 
-| Board | Config | Display |
-|---|---|---|
-| "ESP32-C3 OLED Entwicklungsboard" | `esphome/atc-c3.yaml` | 0.42" 72x40 SSD1306 (I2C) |
-| [Waveshare ESP32-S3-LCD-1.47](https://www.waveshare.com/wiki/ESP32-S3-LCD-1.47) | `esphome/atc-s3.yaml` | 1.47" 172x320 ST7789 (SPI), landscape |
+| Board | Config | Display | Extras |
+|---|---|---|---|
+| "ESP32-C3 OLED Entwicklungsboard" | `esphome/atc-c3.yaml` | 0.42" 72x40 OLED (I2C) | |
+| [Waveshare ESP32-S3-LCD-1.47](https://www.waveshare.com/wiki/ESP32-S3-LCD-1.47) | `esphome/atc-s3.yaml` | 1.47" 172x320 ST7789 (SPI), landscape | SCD4x CO₂, CC1101 433 MHz |
+| ESP32-S3 Super Mini | `esphome/atc-s3mini.yaml` | none | SCD4x CO₂ |
 
 Shared settings are in `esphome/common.yaml`:
 
 - **Passive proxy**: only forwards advertisements, never connects to devices.
-- **Status screen**: Wi-Fi signal, HA connection, BLE advertisements per minute,
-  uptime. The BOOT button, or the *Display* switch in HA, turns it on and off.
 - **Diagnostics in HA**: Wi-Fi signal, uptime, advertisements per minute.
-- **Self-updates**: the board checks the manifest on GitHub Pages every 6 h and
+- **Self-updates**: the board checks its manifest on GitHub Pages after
+  connecting, every hour and via a *Check for firmware update* button, and
   offers new firmware as an update entity in HA.
+
+Boards with a screen show Wi-Fi signal, HA connection, BLE advertisements per
+minute and uptime; the BOOT button, or the *Display* switch in HA, turns it on
+and off (`esphome/display_toggle.yaml`). `esphome/co2.yaml` and
+`esphome/radio433.yaml` add the SCD4x and CC1101.
 
 ## Flashing and setup (browser only)
 
 1. Open [hmeyer.github.io/atc_collector_esp32](https://hmeyer.github.io/atc_collector_esp32/)
-   in desktop Chrome or Edge, plug in the board, click **Connect** and install.
-   The firmware for the connected chip (C3 or S3) is picked automatically.
+   in desktop Chrome or Edge, plug in the board, click **Connect** under your
+   board and install.
 2. Choose **Configure Wi-Fi** after installing. Without it, the board opens a
    hotspot named after itself with a setup page.
 3. HA lists the board under *Settings → Devices & services* as a discovered
    ESPHome device. Configure it; no key is needed (see Security).
 4. Newly reachable sensors appear as discovered Xiaomi BLE / BTHome devices.
 
-Every push to `main` builds both boards on GitHub Actions and publishes the
-flasher, the images and `manifest.json` to GitHub Pages. Pull requests attach
-the images as a workflow artifact.
+Every push to `main` builds all boards on GitHub Actions and publishes the
+flasher, the images and one `<board>.manifest.json` per board to GitHub Pages.
+The old shared `manifest.json` (C3 and Waveshare S3) is still published for
+boards flashed before the per-board manifests. Pull requests attach the images
+as a workflow artifact.
 
 One-time repo setup: *Settings → Pages → Source: GitHub Actions*. Pages needs
 the repository to be public (on the free plan).
@@ -50,23 +57,31 @@ The firmware is public, so nothing secret is compiled in:
   the LAN can therefore connect to a board and receive what it hears. That's
   limited on purpose: the proxy is passive (it can't be used to connect to BLE
   devices such as locks) and the readings are unencrypted broadcasts anyway.
-- Firmware can't be pushed from the LAN; boards only pull from GitHub Pages.
+- Updates are pulled from GitHub Pages; there's no ESPHome OTA endpoint for
+  pushing firmware from the LAN. Exception: while the fallback hotspot is
+  active (Wi-Fi unreachable for about a minute), the captive portal's web
+  server, which includes a firmware upload page, runs without a password.
 
 ## Hardware notes
 
-ESP32-C3 OLED board: OLED on I2C SDA=5, SCL=6, BOOT button GPIO9. The 72x40
-glass sits at (30, 12) of the controller's 128x64 RAM (`oled_x`/`oled_y` in
+ESP32-C3 OLED board: OLED on I2C SDA=5, SCL=6, BOOT button GPIO9. The OLED
+controller has 132 columns (SH1106-like), so it's driven with the SH1106 model;
+the 72x40 glass is at (28, 12) of the frame buffer (`oled_x`/`oled_y` in
 `atc-c3.yaml`). Wi-Fi transmit power is reduced to 8.5 dB because full power
 causes dropouts on these boards.
 
 Waveshare ESP32-S3-LCD-1.47: LCD MOSI/SCLK/CS/DC/RST = 45/40/42/41/39,
-backlight 48, BOOT button GPIO0.
+backlight 48, BOOT button GPIO0. Header: SCD4x SCL/SDA = 1/2; CC1101
+CSN/SCK/MOSI/MISO/GDO0/GDO2 = 10/12/11/13/9/8.
+
+ESP32-S3 Super Mini: the SCD4x breakout (GND VDD SCL SDA) plugs straight into
+the header row GND 3V3 13 12 next to 5V, i.e. SCL = GPIO13, SDA = GPIO12.
 
 ## Development
 
 ```
 pip install esphome==2026.9.1
-esphome compile esphome/atc-c3.yaml   # or atc-s3.yaml
+esphome compile esphome/atc-c3.yaml   # or atc-s3.yaml, atc-s3mini.yaml
 pio test -e native                    # unit tests for lib/atc_parser
 ```
 

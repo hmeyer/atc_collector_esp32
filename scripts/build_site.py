@@ -1,8 +1,13 @@
 """Assemble the GitHub Pages site: web flasher page, firmware images and the
-manifest used by both ESP Web Tools (first install) and the boards'
+manifests used by both ESP Web Tools (first install) and the boards'
 http_request update entity (self-updates).
 
-usage: build_site.py OUT_DIR VERSION NAME:CHIP_FAMILY...
+Each board gets its own NAME.manifest.json: two different boards with the
+same chip family can't share one. BOARD:CHIP_FAMILY:legacy boards are also
+listed in the old shared manifest.json, which boards flashed before the
+per-board manifests still poll.
+
+usage: build_site.py OUT_DIR VERSION NAME:CHIP_FAMILY[:legacy]...
 """
 
 import hashlib
@@ -26,13 +31,13 @@ def main() -> None:
     out, version, boards = Path(sys.argv[1]), sys.argv[2], sys.argv[3:]
     out.mkdir(parents=True, exist_ok=True)
     shutil.copy("web/index.html", out)
-    builds = []
+    legacy_builds = []
     for board in boards:
-        name, chip = board.split(":")
+        name, chip, *flags = board.split(":")
         factory, ota = f"{name}.factory.bin", f"{name}.ota.bin"
         shutil.copy(find_image(name, "factory"), out / factory)
         shutil.copy(find_image(name, "ota"), out / ota)
-        builds.append({
+        build = {
             "chipFamily": chip,
             "parts": [{"path": factory, "offset": 0}],
             "ota": {
@@ -41,16 +46,23 @@ def main() -> None:
                 "summary": f"ATC collector {version}",
                 "release_url": f"{REPO_URL}/commit/{version}",
             },
-        })
+        }
+        write_manifest(out / f"{name}.manifest.json", f"ATC Collector ({name})", version, [build])
+        if "legacy" in flags:
+            legacy_builds.append(build)
+    write_manifest(out / "manifest.json", "ATC Collector", version, legacy_builds)
+
+
+def write_manifest(path: Path, title: str, version: str, builds: list) -> None:
     manifest = {
-        "name": "ATC Collector",
+        "name": title,
         "version": version,
         # Lets ESP Web Tools offer adding the device to Home Assistant.
         "home_assistant_domain": "esphome",
         "new_install_prompt_erase": True,
         "builds": builds,
     }
-    (out / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
+    path.write_text(json.dumps(manifest, indent=2) + "\n")
 
 
 if __name__ == "__main__":

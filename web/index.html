@@ -24,18 +24,24 @@
   <p class="sub">ESPHome Bluetooth proxy for Home Assistant, with a status screen.
     Extends HA's Bluetooth range for Xiaomi thermometers (e.g. running
     <a href="https://github.com/pvvx/ATC_MiThermometer">pvvx ATC_MiThermometer</a>).
-    Supported boards: ESP32-C3 OLED board (0.42" OLED) and Waveshare ESP32-S3-LCD-1.47.
-    The right firmware is picked automatically from the connected chip.</p>
+    Pick the button for your board.</p>
 
-  <esp-web-install-button manifest="manifest.json">
-    <span slot="unsupported">Your browser can't flash devices. Use desktop Chrome or Edge.</span>
-    <span slot="not-allowed">Flashing needs a secure (https) page.</span>
-  </esp-web-install-button>
+  <h2>ESP32-C3 OLED board</h2>
+  <p class="sub">Bluetooth proxy with a 0.42" OLED status screen.</p>
+  <esp-web-install-button manifest="atc-c3.manifest.json"></esp-web-install-button>
+
+  <h2>Waveshare ESP32-S3-LCD-1.47</h2>
+  <p class="sub">Bluetooth proxy, CO&#8322; sensor (SCD4x) and 433&nbsp;MHz radio (CC1101), color LCD.</p>
+  <esp-web-install-button manifest="atc-s3.manifest.json"></esp-web-install-button>
+
+  <h2>ESP32-S3 Super Mini</h2>
+  <p class="sub">Bluetooth proxy and CO&#8322; sensor (SCD4x), no display.</p>
+  <esp-web-install-button manifest="atc-s3mini.manifest.json"></esp-web-install-button>
 
   <h2>Steps</h2>
   <ol>
     <li>Open this page in desktop <b>Chrome</b> or <b>Edge</b> (Firefox and Safari lack Web Serial).</li>
-    <li>Connect the board by USB-C, click <b>Connect</b>, and pick the
+    <li>Connect the board by USB, click <b>Connect</b> under your board, and pick the
       "USB JTAG/serial debug unit" port.</li>
     <li>If no port shows up, hold <b>BOOT</b>, tap <b>RST</b> (or re-plug), release BOOT, and try again.</li>
     <li>After installing, choose <b>Configure Wi-Fi</b> and enter your network.

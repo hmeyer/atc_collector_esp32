@@ -1,0 +1,29 @@
+# Display on/off for boards with a screen: a "Display" switch in Home
+# Assistant (e.g. for night mode), toggled by the BOOT button. The board
+# file provides the scripts display_on / display_off and ${button_pin}.
+
+switch:
+  - platform: template
+    id: display_switch
+    name: Display
+    icon: mdi:monitor
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_ON
+    turn_on_action:
+      - script.execute: display_on
+    turn_off_action:
+      - script.execute: display_off
+
+binary_sensor:
+  - platform: gpio
+    id: boot_button
+    pin:
+      number: ${button_pin}
+      # The BOOT button is on a strapping pin by design.
+      ignore_strapping_warning: true
+      inverted: true
+      mode:
+        input: true
+        pullup: true
+    on_press:
+      - switch.toggle: display_switch
