@@ -12,13 +12,47 @@ i2c:
     frequency: 100kHz
 
 sensor:
+  # Read at the sensor's own 5 s measurement rate; the averages below are
+  # computed from that.
   - platform: scd4x
     i2c_id: co2_i2c
     co2:
-      id: co2
-      name: CO2
+      id: co2_live
+      internal: true
     # Berlin; only used for pressure compensation, a few 10 m don't matter.
     altitude_compensation: 40m
-    # Assumes the room gets fresh air (~400 ppm) at least once a week.
+    # Assumes the sensor sees fresh air (~400 ppm) for a few minutes at least
+    # once a week of operation. The calibration history lives in the sensor's
+    # EEPROM and survives power cycles.
     automatic_self_calibration: true
-    update_interval: 60s
+    update_interval: 5s
+  # What Home Assistant gets: the 1-minute average, once a minute.
+  - platform: copy
+    source_id: co2_live
+    id: co2
+    name: CO2
+    unit_of_measurement: ppm
+    device_class: carbon_dioxide
+    state_class: measurement
+    accuracy_decimals: 0
+    filters:
+      - sliding_window_moving_average:
+          window_size: 12
+          send_every: 12
+  # For displays: averages updated every 5 s.
+  - platform: copy
+    source_id: co2_live
+    id: co2_avg_1m
+    internal: true
+    filters:
+      - sliding_window_moving_average:
+          window_size: 12
+          send_every: 1
+  - platform: copy
+    source_id: co2_live
+    id: co2_avg_5m
+    internal: true
+    filters:
+      - sliding_window_moving_average:
+          window_size: 60
+          send_every: 1

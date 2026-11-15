@@ -43,6 +43,34 @@ light:
     restore_mode: ALWAYS_ON
     entity_category: config
 
+# What the display shows; BUTTON1 (GPIO35) cycles through it.
+select:
+  - platform: template
+    id: co2_mode
+    name: CO2 display
+    icon: mdi:molecule-co2
+    entity_category: config
+    options:
+      - Live
+      - 1 min average
+      - 5 min average
+    initial_option: 1 min average
+    optimistic: true
+    restore_value: true
+
+binary_sensor:
+  - platform: gpio
+    id: mode_button
+    pin:
+      number: GPIO35
+      # Input-only pin; the board has an external pull-up.
+      mode: input
+      inverted: true
+    on_press:
+      - select.next:
+          id: co2_mode
+          cycle: true
+
 font:
   - file: "gfonts://Roboto Mono"
     id: small
@@ -79,9 +107,14 @@ display:
     update_interval: 1s
     lambda: |-
       it.fill(Color::BLACK);
-      // CO2, colour-coded: < 1000 ppm good, < 1400 ppm ventilate soon.
-      if (id(co2).has_state()) {
-        const float ppm = id(co2).state;
+      // CO2 in the selected mode, colour-coded: < 1000 ppm good,
+      // < 1400 ppm ventilate soon.
+      static const char *const kModes[] = {"live", "1 min", "5 min"};
+      const size_t mode = id(co2_mode).active_index().value_or(1);
+      sensor::Sensor *const sources[] = {id(co2_live), id(co2_avg_1m), id(co2_avg_5m)};
+      sensor::Sensor *const src = sources[mode < 3 ? mode : 1];
+      if (src->has_state()) {
+        const float ppm = src->state;
         const Color c = ppm < 1000 ? id(green) : ppm < 1400 ? id(orange) : id(red);
         it.printf(4, 0, id(huge), c, "%.0f", ppm);
       } else {
@@ -89,6 +122,7 @@ display:
       }
       it.print(236, 8, id(small), id(grey), TextAlign::TOP_RIGHT, "ppm");
       it.print(236, 26, id(small), id(grey), TextAlign::TOP_RIGHT, "CO2");
+      it.print(236, 50, id(small), id(cyan), TextAlign::TOP_RIGHT, kModes[mode < 3 ? mode : 1]);
       const bool ha = api_is_connected();
       it.printf(4, 86, id(small), ha ? id(green) : id(red), "HA %s", ha ? "OK" : "--");
       if (id(wifi_rssi).has_state())
