@@ -1,0 +1,105 @@
+# LILYGO TTGO T-Display (ESP32, 1.14" 135x240 ST7789): Bluetooth proxy and
+# live CO2 on the display, used in landscape.
+#
+# SCD4x on the board's I2C pins: SDA = GPIO21, SCL = GPIO22, VDD to 3V, GND
+# to G (all next to each other on the header).
+
+substitutions:
+  name: atc-tdisplay
+  friendly_name: ATC T-Display
+  # BUTTON2 (BOOT) toggles the display.
+  button_pin: GPIO0
+
+packages:
+  common: !include common.yaml
+  display_toggle: !include display_toggle.yaml
+  co2: !include {file: co2.yaml, vars: {sda: GPIO21, scl: GPIO22}}
+
+esp32:
+  board: esp32dev
+  flash_size: 4MB
+  framework:
+    type: esp-idf
+
+spi:
+  - id: lcd_spi
+    clk_pin: GPIO18
+    mosi_pin: GPIO19
+
+output:
+  - platform: ledc
+    id: backlight_pwm
+    pin: GPIO4
+
+light:
+  # Dimmable from HA, e.g. by an automation at night.
+  - platform: monochromatic
+    id: backlight
+    name: Backlight
+    output: backlight_pwm
+    restore_mode: ALWAYS_ON
+    entity_category: config
+
+font:
+  - file: "gfonts://Roboto Mono"
+    id: small
+    size: 16
+  - file: "gfonts://Roboto Mono@700"
+    id: huge
+    size: 64
+
+color:
+  - id: grey
+    hex: "8A8A8A"
+  - id: cyan
+    hex: "5AC8E6"
+  - id: green
+    hex: "4CC764"
+  - id: orange
+    hex: "F0A030"
+  - id: red
+    hex: "F05050"
+
+display:
+  # ESPHome preset for this board: CS 5, DC 16, offsets and inversion.
+  # Without PSRAM it draws in strips with a small buffer.
+  - platform: mipi_spi
+    id: lcd
+    spi_id: lcd_spi
+    model: T-DISPLAY
+    # The preset's CS pin is a strapping pin; that's the board's wiring.
+    cs_pin:
+      number: GPIO5
+      ignore_strapping_warning: true
+    reset_pin: GPIO23
+    rotation: 90
+    update_interval: 1s
+    lambda: |-
+      it.fill(Color::BLACK);
+      // CO2, colour-coded: < 1000 ppm good, < 1400 ppm ventilate soon.
+      if (id(co2).has_state()) {
+        const float ppm = id(co2).state;
+        const Color c = ppm < 1000 ? id(green) : ppm < 1400 ? id(orange) : id(red);
+        it.printf(4, 0, id(huge), c, "%.0f", ppm);
+      } else {
+        it.print(4, 0, id(huge), id(grey), "--");
+      }
+      it.print(236, 8, id(small), id(grey), TextAlign::TOP_RIGHT, "ppm");
+      it.print(236, 26, id(small), id(grey), TextAlign::TOP_RIGHT, "CO2");
+      const bool ha = api_is_connected();
+      it.printf(4, 86, id(small), ha ? id(green) : id(red), "HA %s", ha ? "OK" : "--");
+      if (id(wifi_rssi).has_state())
+        it.printf(84, 86, id(small), id(cyan), "Wi-Fi %.0f", id(wifi_rssi).state);
+      else
+        it.print(84, 86, id(small), id(red), "Wi-Fi --");
+      it.printf(4, 110, id(small), id(grey), "BLE %.0f/min  up %.0fm",
+                id(adverts_per_min).has_state() ? id(adverts_per_min).state : 0.0f,
+                id(uptime_s).has_state() ? id(uptime_s).state / 60 : 0.0f);
+
+script:
+  - id: display_on
+    then:
+      - light.turn_on: backlight
+  - id: display_off
+    then:
+      - light.turn_off: backlight

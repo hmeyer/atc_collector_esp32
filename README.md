@@ -13,6 +13,7 @@ device.
 | "ESP32-C3 OLED Entwicklungsboard" | `esphome/atc-c3.yaml` | 0.42" 72x40 OLED (I2C) | |
 | [Waveshare ESP32-S3-LCD-1.47](https://www.waveshare.com/wiki/ESP32-S3-LCD-1.47) | `esphome/atc-s3.yaml` | 1.47" 172x320 ST7789 (SPI), landscape | SCD4x CO₂, CC1101 433 MHz |
 | ESP32-S3 Super Mini | `esphome/atc-s3mini.yaml` | none | SCD4x CO₂ |
+| [LILYGO TTGO T-Display](https://github.com/Xinyuan-LilyGO/TTGO-T-Display) (ESP32) | `esphome/atc-tdisplay.yaml` | 1.14" 135x240 ST7789 (SPI), landscape | SCD4x CO₂ |
 
 Shared settings are in `esphome/common.yaml`:
 
@@ -77,11 +78,17 @@ CSN/SCK/MOSI/MISO/GDO0/GDO2 = 10/12/11/13/9/8.
 ESP32-S3 Super Mini: the SCD4x breakout (GND VDD SCL SDA) plugs straight into
 the header row GND 3V3 13 12 next to 5V, i.e. SCL = GPIO13, SDA = GPIO12.
 
+LILYGO TTGO T-Display: display via ESPHome's `T-DISPLAY` preset (SPI 18/19,
+CS 5, DC 16, RST 23), backlight GPIO4 (dimmable), BOOT button GPIO0. SCD4x on
+the board's I2C pins SDA = GPIO21, SCL = GPIO22 (next to 3V and G on the
+header). Its LiPo connector charges a battery, but with continuous Bluetooth
+scanning and Wi-Fi it only lasts hours, so treat it as a backup at most.
+
 ## Development
 
 ```
 pip install esphome==2026.9.1
-esphome compile esphome/atc-c3.yaml   # or atc-s3.yaml, atc-s3mini.yaml
+esphome compile esphome/atc-c3.yaml   # or atc-s3, atc-s3mini, atc-tdisplay
 pio test -e native                    # unit tests for lib/atc_parser
 ```
 
