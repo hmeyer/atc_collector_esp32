@@ -50,13 +50,13 @@ jobs:
         run: pio test -e native
       - name: Build firmware
         run: |
-          for board in atc-c3 atc-s3 atc-s3mini atc-tdisplay; do
+          for board in atc-c3 atc-s3 atc-tdisplay; do
             esphome -s version "${GITHUB_SHA::7}" compile "esphome/$board.yaml"
           done
       - name: Assemble flasher site
         run: >
           python scripts/build_site.py _site "${GITHUB_SHA::7}"
-          atc-c3:ESP32-C3:legacy atc-s3:ESP32-S3:legacy atc-s3mini:ESP32-S3 atc-tdisplay:ESP32
+          atc-c3:ESP32-C3:legacy atc-s3:ESP32-S3:legacy atc-tdisplay:ESP32
       - name: Upload firmware images
         uses: actions/upload-artifact@v7
         with:

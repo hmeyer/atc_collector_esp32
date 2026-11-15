@@ -1,11 +1,10 @@
 # LILYGO TTGO T-Display (ESP32, 1.14" 135x240 ST7789): Bluetooth proxy and
 # live CO2 on the display, used in landscape.
 #
-# SCD4x plugged straight into the header row G G 21 22 (end opposite USB):
-# GND -> G, SCL -> GPIO21, SDA -> GPIO22. Its VDD header pin must be removed
-# (it would land on the second G) and wired to 3V instead (other row, same
-# end). Never 5V: the breakout's pull-ups would put 5 V on the I2C pins.
-# Not GPIO12: a pulled-up GPIO12 selects 1.8 V flash and stops the boot.
+# SCD4x on a cable: VDD -> 3V, GND -> G, SDA -> GPIO21, SCL -> GPIO22 (the
+# board's labelled I2C pins). Never 5V: the breakout's pull-ups would put 5 V
+# on the I2C pins. Not GPIO12: a pulled-up GPIO12 selects 1.8 V flash and
+# stops the boot. I2C runs at 20 kHz so a long cable still gives clean edges.
 
 substitutions:
   name: atc-tdisplay
@@ -16,7 +15,7 @@ substitutions:
 packages:
   common: !include common.yaml
   display_toggle: !include display_toggle.yaml
-  co2: !include {file: co2.yaml, vars: {sda: GPIO22, scl: GPIO21}}
+  co2: !include {file: co2.yaml, vars: {sda: GPIO21, scl: GPIO22, co2_i2c_frequency: 20kHz}}
 
 esp32:
   board: esp32dev

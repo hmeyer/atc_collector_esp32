@@ -12,7 +12,6 @@ device.
 |---|---|---|---|
 | "ESP32-C3 OLED Entwicklungsboard" | `esphome/atc-c3.yaml` | 0.42" 72x40 OLED (I2C) | |
 | [Waveshare ESP32-S3-LCD-1.47](https://www.waveshare.com/wiki/ESP32-S3-LCD-1.47) | `esphome/atc-s3.yaml` | 1.47" 172x320 ST7789 (SPI), landscape | SCD4x CO₂, CC1101 433 MHz |
-| ESP32-S3 Super Mini | `esphome/atc-s3mini.yaml` | none | SCD4x CO₂ |
 | [LILYGO TTGO T-Display](https://github.com/Xinyuan-LilyGO/TTGO-T-Display) (ESP32) | `esphome/atc-tdisplay.yaml` | 1.14" 135x240 ST7789 (SPI), landscape | SCD4x CO₂ |
 
 Shared settings are in `esphome/common.yaml`:
@@ -75,22 +74,21 @@ Waveshare ESP32-S3-LCD-1.47: LCD MOSI/SCLK/CS/DC/RST = 45/40/42/41/39,
 backlight 48, BOOT button GPIO0. Header: SCD4x SCL/SDA = 1/2; CC1101
 CSN/SCK/MOSI/MISO/GDO0/GDO2 = 10/12/11/13/9/8.
 
-ESP32-S3 Super Mini: the SCD4x breakout (GND VDD SCL SDA) plugs straight into
-the header row GND 3V3 13 12 next to 5V, i.e. SCL = GPIO13, SDA = GPIO12.
-
 LILYGO TTGO T-Display: display via ESPHome's `T-DISPLAY` preset (SPI 18/19,
 CS 5, DC 16, RST 23), backlight GPIO4 (dimmable), BOOT button GPIO0. The SCD4x
-plugs straight into the header row G G 21 22 at the end opposite USB:
-GND -> G, SCL -> GPIO21, SDA -> GPIO22. Its VDD pin is removed from the header
-(it would land on the second G) and wired to 3V on the other row instead. Not
-5V: the breakout's pull-ups would put 5 V on the I2C pins. Its LiPo connector charges a battery, but with continuous Bluetooth
-scanning and Wi-Fi it only lasts hours, so treat it as a backup at most.
+hangs on a cable: VDD -> 3V, GND -> G, SDA -> GPIO21, SCL -> GPIO22. Not 5V:
+the breakout's pull-ups would put 5 V on the I2C pins. Not GPIO12: pulled up,
+it selects 1.8 V flash and the board doesn't boot. I2C runs at 20 kHz for long
+cables (`co2_i2c_frequency`); twist SDA with GND and SCL with VDD.
+
+Its LiPo connector charges a battery, but with continuous Bluetooth scanning
+and Wi-Fi it only lasts hours, so treat it as a backup at most.
 
 ## Development
 
 ```
 pip install esphome==2026.9.1
-esphome compile esphome/atc-c3.yaml   # or atc-s3, atc-s3mini, atc-tdisplay
+esphome compile esphome/atc-c3.yaml   # or atc-s3, atc-tdisplay
 pio test -e native                    # unit tests for lib/atc_parser
 ```
 

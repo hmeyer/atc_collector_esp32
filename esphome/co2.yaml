@@ -5,11 +5,15 @@
 # far too warm/dry (+13 C measured), so they aren't exposed. The SCD4x
 # compensates CO2 for its own temperature internally.
 
+substitutions:
+  # Lower it for long sensor cables: slower edges tolerate more capacitance.
+  co2_i2c_frequency: 100kHz
+
 i2c:
   - id: co2_i2c
     sda: ${sda}
     scl: ${scl}
-    frequency: 100kHz
+    frequency: ${co2_i2c_frequency}
 
 sensor:
   - platform: scd4x
