@@ -76,10 +76,10 @@ CSN/SCK/MOSI/MISO/GDO0/GDO2 = 10/12/11/13/9/8.
 
 LILYGO TTGO T-Display: display via ESPHome's `T-DISPLAY` preset (SPI 18/19,
 CS 5, DC 16, RST 23), backlight GPIO4 (dimmable), BOOT button GPIO0. The SCD4x
-hangs on a cable: VDD -> 3V, GND -> G, SDA -> GPIO21, SCL -> GPIO22. Not 5V:
-the breakout's pull-ups would put 5 V on the I2C pins. Not GPIO12: pulled up,
-it selects 1.8 V flash and the board doesn't boot. I2C runs at 20 kHz for long
-cables (`co2_i2c_frequency`); twist SDA with GND and SCL with VDD.
+plugs straight into the header row G G 21 22 at the end opposite USB:
+GND -> G, SCL -> GPIO21, SDA -> GPIO22. Its VDD pin is removed from the header
+(it would land on the second G) and wired to 3V on the other row instead. Not
+5V: the breakout's pull-ups would put 5 V on the I2C pins.
 
 Its LiPo connector charges a battery, but with continuous Bluetooth scanning
 and Wi-Fi it only lasts hours, so treat it as a backup at most.
