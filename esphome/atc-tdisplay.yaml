@@ -43,13 +43,12 @@ light:
     restore_mode: ALWAYS_ON
     entity_category: config
 
-# What the display shows; BUTTON1 (GPIO35) cycles through it.
+# What the display shows; BUTTON1 (GPIO35) cycles through it. Device-only,
+# not exposed to HA; the choice survives reboots.
 select:
   - platform: template
     id: co2_mode
-    name: CO2 display
-    icon: mdi:molecule-co2
-    entity_category: config
+    internal: true
     options:
       - Live
       - 1 min average
