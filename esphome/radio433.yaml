@@ -5,6 +5,9 @@
 # Tuned to Somfy RTS (433.42 MHz) for the window blinds. For now the
 # receiver only logs what it hears ("dump: all"), to confirm the remotes are
 # RTS (not io-homecontrol, which is 868 MHz) before adding entities.
+#
+# NOTE: diagnostic build, see the pulse counters at the end. The
+# remote_transmitter on GDO0 comes back once the wiring is confirmed.
 
 spi:
   - id: radio_spi
@@ -22,16 +25,31 @@ cc1101:
   modulation_type: ASK/OOK
 
 remote_receiver:
-  pin: ${gdo2}
+  pin:
+    number: ${gdo2}
+    allow_other_uses: true
   dump: all
 
-remote_transmitter:
-  pin: ${gdo0}
-  carrier_duty_percent: 100%
-  non_blocking: true
-  on_transmit:
-    then:
-      - cc1101.begin_tx: radio
-  on_complete:
-    then:
-      - cc1101.begin_rx: radio
+# DIAGNOSTIC (temporary): the transmitter is disabled so GDO0 can be read as
+# an input. In RX both GDO lines output the demodulated data (IOCFGx = 0x0D),
+# so edges per minute on each line prove that line's wiring: noise gives a
+# baseline, a remote press a burst.
+sensor:
+  - platform: pulse_counter
+    name: 433 GDO2 edges
+    pin:
+      number: ${gdo2}
+      allow_other_uses: true
+    count_mode:
+      rising_edge: INCREMENT
+      falling_edge: INCREMENT
+    update_interval: 10s
+    entity_category: diagnostic
+  - platform: pulse_counter
+    name: 433 GDO0 edges
+    pin: ${gdo0}
+    count_mode:
+      rising_edge: INCREMENT
+      falling_edge: INCREMENT
+    update_interval: 10s
+    entity_category: diagnostic
