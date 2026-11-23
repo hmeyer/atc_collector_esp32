@@ -2,8 +2,9 @@
 # GDO0 = transmit input, GDO2 = receive output.
 # Include with: radio433: !include {file: radio433.yaml, vars: {...pins...}}
 #
-# For now the receiver only logs what it hears ("dump: all"), to identify
-# the blinds' remote protocol before adding entities.
+# Tuned to Somfy RTS (433.42 MHz) for the window blinds. For now the
+# receiver only logs what it hears ("dump: all"), to confirm the remotes are
+# RTS (not io-homecontrol, which is 868 MHz) before adding entities.
 
 spi:
   - id: radio_spi
@@ -15,7 +16,9 @@ cc1101:
   id: radio
   spi_id: radio_spi
   cs_pin: ${cs}
-  frequency: 433.92MHz
+  # Somfy RTS. The default 433.92 MHz is 500 kHz off, outside the receive
+  # filter (~203 kHz wide).
+  frequency: 433.42MHz
   modulation_type: ASK/OOK
 
 remote_receiver:
