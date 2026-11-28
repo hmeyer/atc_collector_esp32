@@ -19,23 +19,28 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-python@v7
+      # uv provides Python and a venv on PATH for esphome and pio.
+      - uses: astral-sh/setup-uv@v7
         with:
           python-version: "3.12"
+          activate-environment: true
+          cache-dependency-glob: .github/workflows/build.yml
+      # The "uv" in the cache keys: builds from the pip setup store absolute
+      # paths to its Python (e.g. ninja) and fail with the uv venv.
       # ESP-IDF, toolchains and downloaded fonts: only change with the ESPHome
       # version, so this is saved rarely.
       - uses: actions/cache@v6
         with:
           path: ~/.cache/esphome
-          key: esphome-tools-${{ runner.os }}-${{ env.ESPHOME_VERSION }}
-          restore-keys: esphome-tools-${{ runner.os }}-
+          key: esphome-tools-uv-${{ runner.os }}-${{ env.ESPHOME_VERSION }}
+          restore-keys: esphome-tools-uv-${{ runner.os }}-
       # Object files. Saved per commit, so only changed sources recompile.
       - uses: actions/cache@v6
         with:
           path: esphome/.esphome
-          key: esphome-build-${{ runner.os }}-${{ env.ESPHOME_VERSION }}-${{ github.sha }}
+          key: esphome-build-uv-${{ runner.os }}-${{ env.ESPHOME_VERSION }}-${{ github.sha }}
           restore-keys: |
-            esphome-build-${{ runner.os }}-${{ env.ESPHOME_VERSION }}-
+            esphome-build-uv-${{ runner.os }}-${{ env.ESPHOME_VERSION }}-
       # Host tests for lib/atc_parser.
       - uses: actions/cache@v6
         with:
@@ -45,7 +50,7 @@ jobs:
             .pio
           key: pio-native-${{ runner.os }}-${{ hashFiles('platformio.ini') }}
       # ESPHome pins its own platformio, which also runs the host tests.
-      - run: pip install esphome==${{ env.ESPHOME_VERSION }}
+      - run: uv pip install esphome==${{ env.ESPHOME_VERSION }}
       - name: Unit tests (host)
         run: pio test -e native
       # Each board's firmware version is a hash of its resolved config and the

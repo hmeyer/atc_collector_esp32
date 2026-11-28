@@ -100,7 +100,8 @@ and Wi-Fi it only lasts hours, so treat it as a backup at most.
 ## Development
 
 ```
-pip install esphome==2026.9.1
+uv venv && source .venv/bin/activate
+uv pip install esphome==2026.9.1
 esphome compile esphome/atc-c3.yaml   # or atc-s3, atc-tdisplay
 pio test -e native                    # unit tests for lib/atc_parser
 ```
