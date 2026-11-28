@@ -1,0 +1,62 @@
+# One Somfy RTS blind, driven as its own virtual remote. Needs somfy_rts.yaml.
+# Include with:
+#   blind_1: !include {file: somfy_blind.yaml, vars: {id: blind_1, name: Blind, index: 1}}
+#
+# Pairing: hold PROG on the blind's original remote until the blind jogs
+# briefly, then press "<name> pair" in HA; the blind jogs again. The original
+# remote keeps working. RTS has no feedback, so the position is unknown.
+# The address is derived from the board's MAC and ${index}, so every board
+# and blind is a distinct remote; the rolling code is kept in flash.
+
+globals:
+  - id: ${id}_rolling_code
+    type: int
+    restore_value: true
+    initial_value: "0"
+
+script:
+  - id: ${id}_send
+    mode: queued
+    parameters:
+      command: int
+      repeats: int
+    then:
+      - lambda: id(${id}_rolling_code) = (id(${id}_rolling_code) + 1) & 0xFFFF;
+      - script.execute:
+          id: somfy_send
+          command: !lambda return command;
+          repeats: !lambda return repeats;
+          code: !lambda return id(${id}_rolling_code);
+          address: !lambda |-
+            uint8_t mac[6];
+            get_mac_address_raw(mac);
+            return (mac[4] << 16) | (mac[5] << 8) | ${index};
+
+cover:
+  - platform: template
+    id: ${id}
+    name: ${name}
+    device_class: blind
+    assumed_state: true
+    optimistic: true
+    open_action:
+      - script.execute: {id: "${id}_send", command: 0x2, repeats: 2}
+    close_action:
+      - script.execute: {id: "${id}_send", command: 0x4, repeats: 2}
+    # "My": stops a moving blind; a stationary one goes to its favourite
+    # position. That's how RTS defines it.
+    stop_action:
+      - script.execute: {id: "${id}_send", command: 0x1, repeats: 2}
+
+button:
+  - platform: template
+    name: ${name} my position
+    icon: mdi:star
+    on_press:
+      - script.execute: {id: "${id}_send", command: 0x1, repeats: 2}
+  - platform: template
+    name: ${name} pair
+    icon: mdi:link-variant
+    entity_category: config
+    on_press:
+      - script.execute: {id: "${id}_send", command: 0x8, repeats: 6}
