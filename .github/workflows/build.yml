@@ -25,20 +25,22 @@ jobs:
           python-version: "3.12"
           activate-environment: true
           cache-dependency-glob: .github/workflows/build.yml
+      # The "uv" in the cache keys: builds from the pip setup store absolute
+      # paths to its Python (e.g. ninja) and fail with the uv venv.
       # ESP-IDF, toolchains and downloaded fonts: only change with the ESPHome
       # version, so this is saved rarely.
       - uses: actions/cache@v6
         with:
           path: ~/.cache/esphome
-          key: esphome-tools-${{ runner.os }}-${{ env.ESPHOME_VERSION }}
-          restore-keys: esphome-tools-${{ runner.os }}-
+          key: esphome-tools-uv-${{ runner.os }}-${{ env.ESPHOME_VERSION }}
+          restore-keys: esphome-tools-uv-${{ runner.os }}-
       # Object files. Saved per commit, so only changed sources recompile.
       - uses: actions/cache@v6
         with:
           path: esphome/.esphome
-          key: esphome-build-${{ runner.os }}-${{ env.ESPHOME_VERSION }}-${{ github.sha }}
+          key: esphome-build-uv-${{ runner.os }}-${{ env.ESPHOME_VERSION }}-${{ github.sha }}
           restore-keys: |
-            esphome-build-${{ runner.os }}-${{ env.ESPHOME_VERSION }}-
+            esphome-build-uv-${{ runner.os }}-${{ env.ESPHOME_VERSION }}-
       # Host tests for lib/atc_parser.
       - uses: actions/cache@v6
         with:
