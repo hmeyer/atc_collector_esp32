@@ -2,3 +2,4 @@
 .vscode/
 esphome/.esphome/
 esphome/secrets.yaml
+.venv/
