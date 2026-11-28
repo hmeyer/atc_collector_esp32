@@ -1,14 +1,13 @@
-# CC1101 433 MHz transceiver on its own SPI bus.
+# CC1101 433 MHz transceiver on its own SPI bus, tuned to Somfy RTS
+# (433.42 MHz) for the window blinds.
 # Include with: radio433: !include {file: radio433.yaml, vars: {...pins...}}
 #
-# Tuned to Somfy RTS (433.42 MHz) for the window blinds. For now the
-# receiver only logs what it hears ("dump: all"), to capture the remotes'
-# RTS frames before adding entities.
-#
 # Single GDO line: an edge-count diagnostic showed GDO0 carrying the
-# demodulated signal while the GDO2 line to the board stayed silent, so the
-# receiver reads GDO0 (in RX the CC1101 outputs the data on GDO0, IOCFG0 =
-# 0x0D). The transmitter will share this pin once RTS sending is added.
+# demodulated signal while the GDO2 line to the board stayed silent. So GDO0
+# is shared: in RX the CC1101 outputs the received data on it (IOCFG0 =
+# 0x0D), in TX it reads the data to send from it. The pin is open-drain with
+# a pull-up, so the ESP never drives against the CC1101's output, and the
+# transmitter hands the line over around each transmission.
 
 spi:
   - id: radio_spi
@@ -26,5 +25,42 @@ cc1101:
   modulation_type: ASK/OOK
 
 remote_receiver:
-  pin: ${gdo0}
+  pin:
+    number: ${gdo0}
+    allow_other_uses: true
+    mode:
+      input: true
+      output: true
+      open_drain: true
+      pullup: true
+  # Logs RTS frames from the remotes (and our own transmissions).
   dump: all
+
+remote_transmitter:
+  id: rts_tx
+  pin:
+    number: ${gdo0}
+    allow_other_uses: true
+    mode:
+      input: true
+      output: true
+      open_drain: true
+      pullup: true
+  carrier_duty_percent: 100%
+  non_blocking: true
+  # Keep the line low (no carrier) until the CC1101 has left TX.
+  eot_level: false
+  on_transmit:
+    then:
+      - cc1101.set_idle: radio
+      - remote_transmitter.digital_write:
+          transmitter_id: rts_tx
+          value: false
+      - cc1101.begin_tx: radio
+  on_complete:
+    then:
+      - cc1101.set_idle: radio
+      - remote_transmitter.digital_write:
+          transmitter_id: rts_tx
+          value: true
+      - cc1101.begin_rx: radio

@@ -1,0 +1,68 @@
+# Somfy RTS sender: the board acts as an additional RTS remote (one virtual
+# remote per blind, see somfy_blind.yaml). Needs radio433.yaml.
+#
+# RTS is a rolling-code protocol: every frame carries a 16-bit counter that
+# must increase, so recorded frames can't be replayed. Frame (7 bytes, then
+# obfuscated by XOR-ing each byte with the previous one):
+#   0: 0xA0 | (rolling code & 0x0F)   1: command << 4 | checksum
+#   2-3: rolling code (big endian)     4-6: remote address (little endian)
+# Sent Manchester-coded (rising edge = 1) after a wake-up pulse and sync
+# pulses, as a first frame plus repeats. Verified against frames captured
+# from the original Smoove RTS remote (decode in the PR).
+
+# Rolling codes must survive reboots right away: a code reused after a
+# restart within the default 60 s write interval would be ignored (1 s here).
+preferences:
+  flash_write_interval: 1s
+
+script:
+  - id: somfy_send
+    mode: queued
+    parameters:
+      command: int
+      address: int
+      code: int
+      repeats: int
+    then:
+      - lambda: |-
+          uint8_t f[7];
+          f[0] = 0xA0 | (code & 0x0F);
+          f[1] = (command & 0x0F) << 4;
+          f[2] = (code >> 8) & 0xFF;
+          f[3] = code & 0xFF;
+          f[4] = address & 0xFF;
+          f[5] = (address >> 8) & 0xFF;
+          f[6] = (address >> 16) & 0xFF;
+          uint8_t checksum = 0;
+          for (uint8_t b : f) checksum ^= b ^ (b >> 4);
+          f[1] |= checksum & 0x0F;
+          for (int i = 1; i < 7; i++) f[i] ^= f[i - 1];
+          ESP_LOGI("somfy", "send command 0x%X code %d address 0x%06X", command, code, address);
+
+          const uint32_t half = 640;  // half a Manchester bit
+          auto call = id(rts_tx).transmit();
+          auto *d = call.get_data();
+          d->set_carrier_frequency(0);
+          d->mark(9415);   // wake-up
+          d->space(89565);
+          for (int frame = 0; frame <= repeats; frame++) {
+            for (int s = 0; s < (frame == 0 ? 2 : 7); s++) {  // hardware sync
+              d->mark(2560);
+              d->space(2560);
+            }
+            d->mark(4550);  // software sync
+            d->space(half);
+            for (int i = 0; i < 56; i++) {
+              if ((f[i / 8] >> (7 - i % 8)) & 1) {
+                d->space(half);
+                d->mark(half);
+              } else {
+                d->mark(half);
+                d->space(half);
+              }
+            }
+            d->space(30415);  // inter-frame gap
+          }
+          call.perform();
+      # The transmitter is non-blocking; keep queued sends apart.
+      - delay: !lambda 'return 200 + (repeats + 1) * 160;'
