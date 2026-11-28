@@ -40,8 +40,11 @@ and off (`esphome/display_toggle.yaml`). `esphome/co2.yaml` and
 
 Every push to `main` builds all boards on GitHub Actions and publishes the
 flasher, the images and one `<board>.manifest.json` per board to GitHub Pages.
-The old shared `manifest.json` (C3 and Waveshare S3) is still published for
-boards flashed before the per-board manifests. Pull requests attach the images
+Each board's firmware version is a hash of its resolved ESPHome config (plus
+the ESPHome version), so a board only rebuilds and is only offered an update
+when its own firmware changed. The old shared `manifest.json` (C3 and
+Waveshare S3) is still published for boards flashed before the per-board
+manifests. Pull requests attach the images
 as a workflow artifact.
 
 One-time repo setup: *Settings → Pages → Source: GitHub Actions*. Pages needs

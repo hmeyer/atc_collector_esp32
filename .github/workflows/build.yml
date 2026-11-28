@@ -48,15 +48,24 @@ jobs:
       - run: pip install esphome==${{ env.ESPHOME_VERSION }}
       - name: Unit tests (host)
         run: pio test -e native
+      # Each board's firmware version is a hash of its resolved config and the
+      # ESPHome version, not the commit: the version is compiled into a header
+      # every ESPHome source includes, so a per-commit version recompiled all
+      # of them on every board for every commit. It also means a board is only
+      # offered an update when its own firmware changed.
       - name: Build firmware
         run: |
           for board in atc-c3 atc-s3 atc-tdisplay; do
-            esphome -s version "${GITHUB_SHA::7}" compile "esphome/$board.yaml"
+            v=$( { echo "$ESPHOME_VERSION"; esphome -s version 0 config "esphome/$board.yaml" | grep -v '^INFO'; } | sha256sum | cut -c1-8 )
+            echo "$board: version $v"
+            echo "${board//-/_}=$v" >> "$GITHUB_ENV"
+            esphome -s version "$v" compile "esphome/$board.yaml"
           done
       - name: Assemble flasher site
         run: >
           python scripts/build_site.py _site "${GITHUB_SHA::7}"
-          atc-c3:ESP32-C3:legacy atc-s3:ESP32-S3:legacy atc-tdisplay:ESP32
+          atc-c3:ESP32-C3:$atc_c3:legacy atc-s3:ESP32-S3:$atc_s3:legacy
+          atc-tdisplay:ESP32:$atc_tdisplay
       - name: Upload firmware images
         uses: actions/upload-artifact@v7
         with:
