@@ -3,11 +3,14 @@ manifests used by both ESP Web Tools (first install) and the boards'
 http_request update entity (self-updates).
 
 Each board gets its own NAME.manifest.json: two different boards with the
-same chip family can't share one. BOARD:CHIP_FAMILY:legacy boards are also
+same chip family can't share one. VERSION is the board's firmware version
+(what the update entity compares against). Boards marked :legacy are also
 listed in the old shared manifest.json, which boards flashed before the
-per-board manifests still poll.
+per-board manifests still poll; it carries the first legacy board's version,
+so the other legacy board is offered one update that moves it to its own
+manifest.
 
-usage: build_site.py OUT_DIR VERSION NAME:CHIP_FAMILY[:legacy]...
+usage: build_site.py OUT_DIR COMMIT NAME:CHIP_FAMILY:VERSION[:legacy]...
 """
 
 import hashlib
@@ -28,12 +31,12 @@ def find_image(name: str, kind: str) -> Path:
 
 
 def main() -> None:
-    out, version, boards = Path(sys.argv[1]), sys.argv[2], sys.argv[3:]
+    out, commit, boards = Path(sys.argv[1]), sys.argv[2], sys.argv[3:]
     out.mkdir(parents=True, exist_ok=True)
     shutil.copy("web/index.html", out)
-    legacy_builds = []
+    legacy_builds, legacy_version = [], None
     for board in boards:
-        name, chip, *flags = board.split(":")
+        name, chip, version, *flags = board.split(":")
         factory, ota = f"{name}.factory.bin", f"{name}.ota.bin"
         shutil.copy(find_image(name, "factory"), out / factory)
         shutil.copy(find_image(name, "ota"), out / ota)
@@ -43,14 +46,15 @@ def main() -> None:
             "ota": {
                 "path": ota,
                 "md5": hashlib.md5((out / ota).read_bytes()).hexdigest(),
-                "summary": f"ATC collector {version}",
-                "release_url": f"{REPO_URL}/commit/{version}",
+                "summary": f"ATC collector {version} (commit {commit})",
+                "release_url": f"{REPO_URL}/commit/{commit}",
             },
         }
         write_manifest(out / f"{name}.manifest.json", f"ATC Collector ({name})", version, [build])
         if "legacy" in flags:
             legacy_builds.append(build)
-    write_manifest(out / "manifest.json", "ATC Collector", version, legacy_builds)
+            legacy_version = legacy_version or version
+    write_manifest(out / "manifest.json", "ATC Collector", legacy_version, legacy_builds)
 
 
 def write_manifest(path: Path, title: str, version: str, builds: list) -> None:
