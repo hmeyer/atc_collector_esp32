@@ -72,7 +72,8 @@ causes dropouts on these boards.
 
 Waveshare ESP32-S3-LCD-1.47: LCD MOSI/SCLK/CS/DC/RST = 45/40/42/41/39,
 backlight 48, BOOT button GPIO0. Header: SCD4x SCL/SDA = 1/2; CC1101
-CSN/SCK/MOSI/MISO/GDO0/GDO2 = 10/12/11/13/9/8.
+CSN/SCK/MOSI/MISO/GDO0 = 10/12/11/13/9, tuned to 433.42 MHz (Somfy RTS). Only
+GDO0 is used: the GDO2 line (wired to 8) carried no signal in testing.
 
 LILYGO TTGO T-Display: display via ESPHome's `T-DISPLAY` preset (SPI 18/19,
 CS 5, DC 16, RST 23), backlight GPIO4 (dimmable), BOOT button GPIO0. The SCD4x

@@ -1,13 +1,14 @@
-# CC1101 433 MHz transceiver on its own SPI bus, wired dual-pin:
-# GDO0 = transmit input, GDO2 = receive output.
+# CC1101 433 MHz transceiver on its own SPI bus.
 # Include with: radio433: !include {file: radio433.yaml, vars: {...pins...}}
 #
 # Tuned to Somfy RTS (433.42 MHz) for the window blinds. For now the
-# receiver only logs what it hears ("dump: all"), to confirm the remotes are
-# RTS (not io-homecontrol, which is 868 MHz) before adding entities.
+# receiver only logs what it hears ("dump: all"), to capture the remotes'
+# RTS frames before adding entities.
 #
-# NOTE: diagnostic build, see the pulse counters at the end. The
-# remote_transmitter on GDO0 comes back once the wiring is confirmed.
+# Single GDO line: an edge-count diagnostic showed GDO0 carrying the
+# demodulated signal while the GDO2 line to the board stayed silent, so the
+# receiver reads GDO0 (in RX the CC1101 outputs the data on GDO0, IOCFG0 =
+# 0x0D). The transmitter will share this pin once RTS sending is added.
 
 spi:
   - id: radio_spi
@@ -25,31 +26,5 @@ cc1101:
   modulation_type: ASK/OOK
 
 remote_receiver:
-  pin:
-    number: ${gdo2}
-    allow_other_uses: true
+  pin: ${gdo0}
   dump: all
-
-# DIAGNOSTIC (temporary): the transmitter is disabled so GDO0 can be read as
-# an input. In RX both GDO lines output the demodulated data (IOCFGx = 0x0D),
-# so edges per minute on each line prove that line's wiring: noise gives a
-# baseline, a remote press a burst.
-sensor:
-  - platform: pulse_counter
-    name: 433 GDO2 edges
-    pin:
-      number: ${gdo2}
-      allow_other_uses: true
-    count_mode:
-      rising_edge: INCREMENT
-      falling_edge: INCREMENT
-    update_interval: 10s
-    entity_category: diagnostic
-  - platform: pulse_counter
-    name: 433 GDO0 edges
-    pin: ${gdo0}
-    count_mode:
-      rising_edge: INCREMENT
-      falling_edge: INCREMENT
-    update_interval: 10s
-    entity_category: diagnostic
